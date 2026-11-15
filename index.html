@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#08171d">
+  <title>Gelgit — Kıyı Keşfi</title>
+  <link rel="stylesheet" href="style.css">
+  <script defer src="world.js"></script>
+  <script defer src="game.js"></script>
+  <script defer src="render.js"></script>
+  <script defer src="main.js"></script>
+</head>
+<body>
+  <main class="shell">
+    <header class="masthead">
+      <div class="brand"><span class="sigil" aria-hidden="true">≈</span><h1>Gelgit</h1></div>
+      <span class="edition">KIYI KEŞFİ <i></i> v0.1</span>
+      <button type="button" id="pause" aria-pressed="false">Duraklat</button>
+    </header>
+
+    <section class="tide" aria-label="Gelgit döngüsü">
+      <div class="tide-phase"><span class="eyebrow">GELGİT</span><strong id="phase">Yüksek su</strong></div>
+      <div class="tide-chart">
+        <div id="tide-meter" class="track" role="progressbar" aria-label="Gelgit döngüsü" aria-valuemin="0" aria-valuemax="90" aria-valuenow="0">
+          <span class="track-fill" id="tide-fill"></span><span class="needle" id="tide-needle"></span>
+        </div>
+        <div class="ticks" aria-hidden="true"><span>Yüksek</span><span>Çekilme</span><span>Düşük</span><span>Yükselme</span></div>
+      </div>
+      <div class="tide-clock"><strong id="timer">0:24</strong><span class="eyebrow" id="next-phase">ÇEKİLMEYE</span></div>
+    </section>
+
+    <section class="viewport" aria-label="Gelgit oyun alanı">
+      <canvas id="sea" width="1100" height="620" aria-label="Başlangıç iskelesi ve Batık Mahalle haritası">Bu oyun Canvas destekli bir tarayıcı gerektirir.</canvas>
+      <div class="chart-label harbor-label"><small>01 / LİMAN</small><span>Başlangıç İskelesi</span></div>
+      <div class="chart-label district-label"><small>02 / BATIK BÖLGE</small><span>Batık Mahalle</span></div>
+      <div class="compass" aria-hidden="true"><span>K</span><b>◆</b></div>
+      <div id="notice" class="notice" role="status" hidden></div>
+      <div class="field-info"><span id="mode" class="mode">TEKNEDE</span><span id="objective">Batık Mahalle’nin kıyısına ilerle.</span></div>
+      <div id="action" class="action" hidden><kbd>E</kbd> <span id="action-label"></span></div>
+      <div id="pause-layer" class="pause-layer" hidden><span>DURAKLATILDI</span></div>
+    </section>
+
+    <footer class="dashboard">
+      <div class="stats" aria-label="İlerleme">
+        <div><span class="eyebrow">YÜK</span><strong id="cargo">0 / 4</strong></div>
+        <div><span class="eyebrow">TESLİM</span><strong id="bank">0</strong></div>
+        <div><span class="eyebrow">LİMAN</span><strong id="level">Seviye 1</strong><small id="upgrade">Kıyı feneri için 3 parça</small></div>
+      </div>
+      <div class="keys" aria-label="Klavye kontrolleri"><span><kbd>WASD</kbd> <kbd>↑↓←→</kbd> Hareket</span><span><kbd>E</kbd> Etkileşim</span></div>
+    </footer>
+  </main>
+</body>
+</html>
