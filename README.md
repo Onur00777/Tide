@@ -1,6 +1,6 @@
-# Gelgit (Tide)
+# TIDE
 
-Gelgit, tarayıcıda çalışan yukarıdan görünümlü bir 2B keşif ve liman kurma RPG prototipi. Batık Mahalle düşük suda açılır. Mahalleden çıkardığın enkazı iskeleye teslim ettikçe liman gelişir.
+Tide, tarayıcıda çalışan yukarıdan görünümlü bir 2B keşif ve liman kurma RPG prototipi. Batık Mahalle düşük suda açılır. Mahalleden çıkardığın enkazı iskeleye teslim ettikçe liman gelişir.
 
 ## Çalıştırma
 
