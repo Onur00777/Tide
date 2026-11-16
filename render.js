@@ -7,25 +7,64 @@ function randomFrom(seed) {
   };
 }
 
+function noiseFrom(seed) {
+  const random = randomFrom(seed);
+  const size = 64;
+  const samples = Float32Array.from({ length: size * size }, random);
+  const at = (x, y) => samples[(y & 63) * size + (x & 63)];
+  const smooth = t => t * t * (3 - 2 * t);
+  return (x, y) => {
+    const col = Math.floor(x);
+    const row = Math.floor(y);
+    const tx = smooth(x - col);
+    const ty = smooth(y - row);
+    const top = at(col, row) * (1 - tx) + at(col + 1, row) * tx;
+    const bottom = at(col, row + 1) * (1 - tx) + at(col + 1, row + 1) * tx;
+    return top * (1 - ty) + bottom * ty;
+  };
+}
+
 class Renderer {
   constructor(canvas, world) {
     this.ctx = canvas.getContext('2d');
     this.world = world;
     const random = randomFrom(4172);
-    this.ripples = Array.from({ length: 216 }, () => ({
+    this.ripples = [96, 120, 108].map(count => Array.from({ length: count }, () => ({
       x: random() * VIEW.width, y: random() * VIEW.height,
-      length: 6 + random() * 34, offset: random() * 7,
-    }));
+      length: 8 + random() * 27, offset: random() * Math.PI * 2,
+    })));
     this.harbor = this.paintPatch(world.harbor, false);
     this.district = this.paintPatch(world.district, true);
     const ctx = this.ctx;
-    this.sea = ctx.createLinearGradient(0, 0, VIEW.width, VIEW.height);
-    this.sea.addColorStop(0, '#174553');
-    this.sea.addColorStop(0.53, '#236471');
-    this.sea.addColorStop(1, '#143c4b');
+    this.sea = this.paintSea();
     this.vignette = ctx.createRadialGradient(550, 286, 125, 550, 286, 635);
     this.vignette.addColorStop(0, '#04142100');
     this.vignette.addColorStop(1, '#041421a8');
+  }
+
+  paintSea() {
+    const canvas = document.createElement('canvas');
+    canvas.width = VIEW.width / 2;
+    canvas.height = VIEW.height / 2;
+    const ctx = canvas.getContext('2d');
+    const image = ctx.createImageData(canvas.width, canvas.height);
+    const noise = noiseFrom(9712);
+    for (let y = 0; y < canvas.height; y++) {
+      for (let x = 0; x < canvas.width; x++) {
+        const sandbank = noise(x / 88, y / 58);
+        const current = noise((x + y * 0.55) / 80, y / 19);
+        const ripples = noise((x - y * 1.3) / 16, y / 4.5);
+        const depth = sandbank * 0.66 + current * 0.26 + ripples * 0.08;
+        const sparkle = Math.max(0, ripples - 0.59) * 21;
+        const i = (y * canvas.width + x) * 4;
+        image.data[i] = 8 + depth * 40 + sparkle;
+        image.data[i + 1] = 40 + depth * 81 + sparkle;
+        image.data[i + 2] = 54 + depth * 68 + sparkle;
+        image.data[i + 3] = 255;
+      }
+    }
+    ctx.putImageData(image, 0, 0);
+    return canvas;
   }
 
   paintPatch(patch, district) {
@@ -110,9 +149,7 @@ class Renderer {
     const ctx = this.ctx;
     const water = game.tide.water;
     const night = 1 - water;
-    ctx.fillStyle = this.sea;
-    ctx.fillRect(0, 0, VIEW.width, VIEW.height);
-    this.chart();
+    ctx.drawImage(this.sea, 0, 0, VIEW.width, VIEW.height);
     this.waves(game.time, 1);
     ctx.globalAlpha = 1 - water * 0.68;
     ctx.drawImage(this.district, 0, 0);
@@ -137,37 +174,24 @@ class Renderer {
     if (game.mode === 'foot') this.drawWalker(game.walker);
   }
 
-  chart() {
-    const ctx = this.ctx;
-    ctx.strokeStyle = '#c7e0d815';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    for (let x = 22; x < VIEW.width; x += 64) {
-      ctx.moveTo(x + 0.5, 17);
-      ctx.lineTo(x + 0.5, VIEW.height - 17);
-    }
-    for (let y = 17; y < VIEW.height; y += 64) {
-      ctx.moveTo(22, y + 0.5);
-      ctx.lineTo(VIEW.width - 22, y + 0.5);
-    }
-    ctx.stroke();
-    ctx.strokeStyle = '#c7e0d830';
-    ctx.strokeRect(21.5, 16.5, VIEW.width - 43, VIEW.height - 33);
-  }
-
   waves(time, opacity) {
     if (opacity < 0.01) return;
     const ctx = this.ctx;
-    ctx.strokeStyle = `rgba(178, 234, 224, ${opacity * 0.16})`;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    for (const wave of this.ripples) {
-      const x = wave.x + Math.sin(time * 0.49 + wave.offset) * 7;
-      const y = wave.y + Math.cos(time * 0.72 + wave.offset) * 2;
-      ctx.moveTo(x, y);
-      ctx.quadraticCurveTo(x + wave.length * 0.5, y - 3, x + wave.length, y);
+    for (const [layer, waves] of this.ripples.entries()) {
+      const light = 0.1 + layer * 0.045;
+      ctx.strokeStyle = `rgba(181, 230, 218, ${opacity * light})`;
+      ctx.lineWidth = 0.7 + layer * 0.2;
+      ctx.beginPath();
+      for (const wave of waves) {
+        const phase = time * (0.65 + layer * 0.17) + wave.offset;
+        const x = wave.x + Math.cos(phase) * (4 + layer * 2);
+        const y = wave.y + Math.sin(phase) * 4;
+        const length = wave.length * (0.65 + 0.35 * Math.cos(phase));
+        ctx.moveTo(x, y);
+        ctx.quadraticCurveTo(x + length * 0.54, y - 2.5, x + length, y - 1);
+      }
+      ctx.stroke();
     }
-    ctx.stroke();
   }
 
   harborDetails(progress) {
