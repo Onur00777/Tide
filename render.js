@@ -208,7 +208,7 @@ class Renderer {
       if (action?.type === 'land') this.ring(action.landing.x, action.landing.y, 12, '#ffe1a6', game.time);
       for (const piece of game.loot) this.debris(piece, game.time);
     }
-    this.drawBoat(game.boat, game.time, game.mode === 'foot');
+    this.drawBoat(game.boat, game.time, game.mode === 'foot', night);
     if (game.mode === 'foot') this.drawWalker(game.walker);
   }
 
@@ -342,40 +342,89 @@ class Renderer {
     ctx.restore();
   }
 
-  drawBoat(boat, time, anchored) {
+  drawBoat(boat, time, anchored, night) {
     const ctx = this.ctx;
+    const speed = boat.currentSpeed / boat.speed;
+    const roll = Math.sin(time * 2.8 + boat.x * 0.014 + boat.y * 0.023);
     if (anchored) this.ring(boat.x, boat.y, 21, '#f3ca8a', time);
     ctx.save();
     ctx.translate(boat.x, boat.y);
-    ctx.rotate(boat.heading);
-    if (boat.moving) {
-      ctx.strokeStyle = '#b8e2da86';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(-9, -4);
-      ctx.quadraticCurveTo(-20, -5, -33 - Math.sin(time * 12) * 4, -12);
-      ctx.moveTo(-9, 4);
-      ctx.quadraticCurveTo(-20, 5, -33 - Math.sin(time * 12) * 4, 12);
-      ctx.stroke();
-    }
-    ctx.fillStyle = '#182628';
-    ctx.strokeStyle = '#fad693';
-    ctx.lineWidth = 1.8;
+    if (boat.moving) this.drawWake(boat, time, speed);
+    ctx.rotate(boat.heading + roll * 0.032);
+    ctx.translate(0, roll * 0.8);
+
+    ctx.fillStyle = '#02161c91';
     ctx.beginPath();
-    ctx.moveTo(13, 0);
-    ctx.quadraticCurveTo(5, -9, -6, -8);
-    ctx.lineTo(-11, -6);
-    ctx.lineTo(-11, 6);
-    ctx.lineTo(-6, 8);
-    ctx.quadraticCurveTo(5, 9, 13, 0);
-    ctx.closePath();
+    ctx.ellipse(-1, 2.5, 15, 9.5, 0, 0, Math.PI * 2);
     ctx.fill();
+
+    const hull = new Path2D();
+    hull.moveTo(14.5, 0);
+    hull.bezierCurveTo(9, -6, 1, -8.5, -8, -7.5);
+    hull.lineTo(-12, -5.5);
+    hull.lineTo(-12, 5.5);
+    hull.lineTo(-8, 7.5);
+    hull.bezierCurveTo(1, 8.5, 9, 6, 14.5, 0);
+    hull.closePath();
+    const deck = ctx.createLinearGradient(0, -8, 0, 8);
+    deck.addColorStop(0, '#76523e');
+    deck.addColorStop(0.35, '#b18059');
+    deck.addColorStop(1, '#63443a');
+    ctx.fillStyle = deck;
+    ctx.fill(hull);
+    ctx.save();
+    ctx.clip(hull);
+    ctx.fillStyle = '#e4b17b64';
+    for (const y of [-4, -1, 2, 5]) ctx.fillRect(-12, y, 27, 0.7);
+    ctx.fillStyle = '#4b3229';
+    ctx.fillRect(-8.5, -4.5, 4, 10);
+    ctx.fillRect(-1, -4, 3.5, 9);
+    ctx.fillStyle = '#d7ab79';
+    ctx.fillRect(-9, -5.25, 3, 10.5);
+    ctx.fillRect(-1.5, -4.75, 3, 9.5);
+    ctx.restore();
+    ctx.strokeStyle = '#e4c69b';
+    ctx.lineWidth = 1.55;
+    ctx.stroke(hull);
+    ctx.fillStyle = '#263638';
+    ctx.fillRect(-14.5, -2.6, 4, 5.2);
+    ctx.fillStyle = '#8daca6';
+    ctx.fillRect(-14, -2.4, 0.9, 3.7);
+    this.disc(7, 0, 2.7, '#5c4033');
+    this.disc(7, 0, 1.4 + night * 0.45, '#fff0bc');
+    ctx.restore();
+  }
+
+  drawWake(boat, time, speed) {
+    const ctx = this.ctx;
+    const length = 8 + speed * 45;
+    const spread = 5 + speed * 10;
+    ctx.save();
+    ctx.rotate(Math.atan2(boat.velocityY, boat.velocityX));
+    const foam = ctx.createLinearGradient(-length - 6, 0, -5, 0);
+    foam.addColorStop(0, '#9bd0c300');
+    foam.addColorStop(0.52, `rgba(149, 210, 197, ${speed * 0.35})`);
+    foam.addColorStop(1, `rgba(223, 246, 226, ${speed * 0.85})`);
+    ctx.strokeStyle = foam;
+    ctx.lineWidth = 1 + speed;
+    ctx.beginPath();
+    for (const side of [-1, 1]) {
+      ctx.moveTo(-4, side * 7);
+      ctx.quadraticCurveTo(-length * 0.48, side * 6, -length, side * spread);
+      ctx.moveTo(-11, side * 4);
+      ctx.quadraticCurveTo(-length * 0.7, side * 3, -length - 5, side * (spread + 3));
+    }
     ctx.stroke();
-    ctx.fillStyle = '#9b5a3c';
-    ctx.fillRect(-8, -5, 9, 10);
-    ctx.fillStyle = '#dd9763';
-    ctx.fillRect(-5, -5, 2, 10);
-    this.disc(4, 0, 2.8, '#fff3c1');
+    ctx.lineWidth = 0.7;
+    ctx.beginPath();
+    for (let index = 0; index < 5; index++) {
+      const travel = (time * 4 + index / 5) % 1;
+      const x = -13 - travel * length;
+      const width = (1.8 + travel * 3) * speed;
+      ctx.moveTo(x, -width);
+      ctx.quadraticCurveTo(x - 3, 0, x - 1, width);
+    }
+    ctx.stroke();
     ctx.restore();
   }
 
