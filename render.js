@@ -76,57 +76,88 @@ class Renderer {
     const size = VIEW.tile;
     const land = new Path2D();
     const edge = new Path2D();
+    const coast = [];
     for (const tile of patch.tiles) {
       const x = tile.x - size / 2;
       const y = tile.y - size / 2;
-      land.rect(x, y, size, size);
       const sides = [[0, -1, x, y, x + size, y], [1, 0, x + size, y, x + size, y + size],
-        [0, 1, x, y + size, x + size, y + size], [-1, 0, x, y, x, y + size]];
+        [0, 1, x + size, y + size, x, y + size], [-1, 0, x, y + size, x, y]];
+      land.moveTo(x, y);
       for (const [dx, dy, x1, y1, x2, y2] of sides) {
-        if (patch.at(tile.col + dx, tile.row + dy) !== TERRAIN.sea) continue;
+        if (tile.type === TERRAIN.pier || patch.at(tile.col + dx, tile.row + dy) !== TERRAIN.sea) {
+          land.lineTo(x2, y2);
+          continue;
+        }
+        const bend = (random() - 0.5) * 19;
+        const mx = (x1 + x2) / 2 + dx * bend;
+        const my = (y1 + y2) / 2 + dy * bend;
+        land.quadraticCurveTo(mx, my, x2, y2);
         edge.moveTo(x1, y1);
-        edge.lineTo(x2, y2);
+        edge.quadraticCurveTo(mx, my, x2, y2);
+        coast.push({ x1, y1, mx, my, x2, y2, dx, dy, phase: random() * Math.PI * 2 });
       }
+      land.closePath();
     }
     ctx.lineCap = 'round';
-    for (const [width, color] of [[31, '#65b5a715'], [17, '#8dc7b622'], [7, '#bdd3a749']]) {
+    for (const [width, color] of [[42, '#57b7a014'], [27, '#65c6a625'], [15, '#75c1a34a'], [6, '#142b2e8c']]) {
       ctx.lineWidth = width;
       ctx.strokeStyle = color;
       ctx.stroke(edge);
     }
+
+    ctx.save();
+    ctx.clip(land);
+    const soil = ctx.createLinearGradient(patch.x, patch.y, patch.x + 180, patch.y + 325);
+    soil.addColorStop(0, district ? '#ab9d7e' : '#89975f');
+    soil.addColorStop(0.5, district ? '#85866d' : '#6e8050');
+    soil.addColorStop(1, district ? '#b4a182' : '#96855a');
+    ctx.fillStyle = soil;
+    ctx.fillRect(0, 0, VIEW.width, VIEW.height);
+
     for (const tile of patch.tiles) {
       const x = tile.x - size / 2;
       const y = tile.y - size / 2;
       const roll = Math.floor(random() * 3);
-      const palette = tile.type === TERRAIN.pier ? ['#8d6246', '#956a49', '#9b7050']
-        : tile.type === TERRAIN.square ? ['#a29171', '#ad9978', '#9b8a6e']
-          : district ? ['#8a886b', '#82856a', '#8b8b72'] : ['#7f8f6a', '#778969', '#85936e'];
-      ctx.fillStyle = palette[roll];
-      ctx.fillRect(x, y, size, size);
       if (tile.type === TERRAIN.pier) {
+        ctx.fillStyle = '#4d3a2c';
+        ctx.fillRect(x, y, size, size);
         for (let plank = 0; plank < size; plank += 7) {
-          ctx.fillStyle = '#362c2a5e';
-          ctx.fillRect(x, y + plank, size, 1);
-          ctx.fillStyle = '#f1c48530';
-          ctx.fillRect(x + 2, y + plank + 2, 24, 1);
+          ctx.fillStyle = ['#946744', '#a5774f', '#8b6041'][Math.floor(random() * 3)];
+          ctx.fillRect(x, y + plank, size - 1, 6);
+          ctx.fillStyle = '#f1c48540';
+          ctx.fillRect(x + 2, y + plank + 1, 23, 1);
+          ctx.fillStyle = '#493223';
+          ctx.fillRect(x + 3, y + plank + 3, 1.5, 1);
+          ctx.fillRect(x + 23, y + plank + 3, 1.5, 1);
         }
         continue;
       }
-      for (let dot = 0; dot < 7; dot++) {
-        ctx.fillStyle = dot % 2 ? '#202d2e2b' : '#ede6b83a';
-        ctx.fillRect(x + random() * 25, y + random() * 25, 1 + random() * 3, 1);
+      for (let dot = 0; dot < 28; dot++) {
+        const grain = random();
+        ctx.fillStyle = grain > 0.55 ? '#24322536' : '#f9dcad47';
+        ctx.fillRect(x + random() * size, y + random() * size, 0.6 + grain * 2.7, 0.65 + grain * 1.5);
       }
       if (tile.type === TERRAIN.square) {
-        ctx.strokeStyle = '#50463143';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(x + 2, y + 2, 24, 24);
+        ctx.fillStyle = '#50463158';
+        ctx.fillRect(x, y, size, size);
+        for (let row = 0; row < 4; row++) {
+          for (let col = 0; col < 3; col++) {
+            const inset = row % 2 ? 1 : 4;
+            ctx.fillStyle = random() > 0.4 ? '#ab9d80' : '#948870';
+            ctx.fillRect(x + inset + col * 8, y + row * 7 + 1, 6.5, 5.5);
+          }
+        }
       }
       if (tile.type === TERRAIN.rubble) this.ruin(ctx, x, y, roll);
     }
-    ctx.strokeStyle = district ? '#b4ae86' : '#a6a781';
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = district ? '#d1ba8b4f' : '#cbb88d87';
+    ctx.lineWidth = 10;
     ctx.stroke(edge);
-    return canvas;
+    ctx.strokeStyle = '#f7dfae87';
+    ctx.lineWidth = 1.8;
+    ctx.stroke(edge);
+    ctx.restore();
+    return { canvas, land, coast };
   }
 
   ruin(ctx, x, y, variant) {
@@ -152,10 +183,17 @@ class Renderer {
     ctx.drawImage(this.sea, 0, 0, VIEW.width, VIEW.height);
     this.waves(game.time, 1);
     ctx.globalAlpha = 1 - water * 0.68;
-    ctx.drawImage(this.district, 0, 0);
+    ctx.drawImage(this.district.canvas, 0, 0);
     ctx.globalAlpha = 1;
-    this.waves(game.time, water * 0.8);
-    ctx.drawImage(this.harbor, 0, 0);
+    if (water > 0.01) {
+      ctx.save();
+      ctx.clip(this.district.land);
+      this.waves(game.time, water);
+      ctx.restore();
+    }
+    this.surf(this.district.coast, game.time, 1 - water * 0.9);
+    ctx.drawImage(this.harbor.canvas, 0, 0);
+    this.surf(this.harbor.coast, game.time, 1);
     this.harborDetails(game.harbor);
 
     ctx.fillStyle = `rgba(6, 16, 37, ${night * 0.48})`;
@@ -192,6 +230,25 @@ class Renderer {
       }
       ctx.stroke();
     }
+  }
+
+  surf(coast, time, visibility) {
+    const ctx = this.ctx;
+    ctx.lineWidth = 0.85;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = `rgba(209, 241, 221, ${0.5 * visibility})`;
+    ctx.beginPath();
+    for (const { x1, y1, mx, my, x2, y2, dx, dy, phase } of coast) {
+      const crest = 0.5 + Math.sin(time * 1.8 + phase) * 0.5;
+      if (crest < 0.27) continue;
+      const distance = 3 + crest * 7;
+      const ox = dx * distance;
+      const oy = dy * distance;
+      const inset = crest * 0.18;
+      ctx.moveTo(x1 + (x2 - x1) * inset + ox, y1 + (y2 - y1) * inset + oy);
+      ctx.quadraticCurveTo(mx + ox, my + oy, x2 - (x2 - x1) * inset + ox, y2 - (y2 - y1) * inset + oy);
+    }
+    ctx.stroke();
   }
 
   harborDetails(progress) {
