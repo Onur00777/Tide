@@ -35,10 +35,10 @@ const DISTRICT_MAP = [
 ];
 
 const PHASES = [
-  { name: 'Yüksek su', next: 'ÇEKİLMEYE', seconds: 13, exposed: false },
-  { name: 'Su çekiliyor', next: 'DÜŞÜK SUYA', seconds: 5, exposed: false },
-  { name: 'Düşük su', next: 'YÜKSELMEYE', seconds: 24, exposed: true },
-  { name: 'Su yükseliyor', next: 'TAŞKINA', seconds: 8, exposed: true },
+  { name: 'Yüksek su', seconds: 10, exposed: false },
+  { name: 'Su çekiliyor', seconds: 5, exposed: false },
+  { name: 'Sular çekildi', seconds: 86, exposed: true },
+  { name: 'Taşkın yaklaşıyor', seconds: 14, exposed: true },
 ];
 
 function distance(a, b) {

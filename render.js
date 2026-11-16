@@ -69,11 +69,12 @@ class Renderer {
         const current = noise((x + y * 0.55) / 80, y / 19);
         const ripples = noise((x - y * 1.3) / 16, y / 4.5);
         const depth = sandbank * 0.66 + current * 0.26 + ripples * 0.08;
-        const sparkle = Math.max(0, ripples - 0.59) * 21;
+        const caustic = noise((x + y * 0.45) / 25, y / 11);
+        const sparkle = Math.max(0, ripples - 0.61) * (16 + caustic * 21);
         const i = (y * canvas.width + x) * 4;
-        image.data[i] = 8 + depth * 40 + sparkle;
-        image.data[i + 1] = 40 + depth * 81 + sparkle;
-        image.data[i + 2] = 54 + depth * 68 + sparkle;
+        image.data[i] = 4 + depth * 37 + sparkle;
+        image.data[i + 1] = 22 + depth * 99 + sparkle;
+        image.data[i + 2] = 42 + depth * 90 + sparkle;
         image.data[i + 3] = 255;
       }
     }
@@ -83,9 +84,11 @@ class Renderer {
 
   paintPatch(patch, district) {
     const canvas = document.createElement('canvas');
-    canvas.width = VIEW.width;
-    canvas.height = VIEW.height;
+    const resolution = 1.5;
+    canvas.width = VIEW.width * resolution;
+    canvas.height = VIEW.height * resolution;
     const ctx = canvas.getContext('2d');
+    ctx.scale(resolution, resolution);
     const random = randomFrom(district ? 9513 : 2741);
     const size = VIEW.tile;
     const land = new Path2D();
@@ -122,9 +125,9 @@ class Renderer {
     ctx.save();
     ctx.clip(land);
     const soil = ctx.createLinearGradient(patch.x, patch.y, patch.x + 180, patch.y + 325);
-    soil.addColorStop(0, district ? '#ab9d7e' : '#89975f');
-    soil.addColorStop(0.5, district ? '#85866d' : '#6e8050');
-    soil.addColorStop(1, district ? '#b4a182' : '#96855a');
+    soil.addColorStop(0, district ? '#938f79' : '#777e5e');
+    soil.addColorStop(0.54, district ? '#586d6d' : '#4a5f53');
+    soil.addColorStop(1, district ? '#8a7465' : '#72745b');
     ctx.fillStyle = soil;
     ctx.fillRect(0, 0, VIEW.width, VIEW.height);
 
@@ -146,10 +149,25 @@ class Renderer {
         }
         continue;
       }
-      for (let dot = 0; dot < 28; dot++) {
+      if (district && tile.type === TERRAIN.street) {
+        const roadside = DIRECTIONS.some(([dx, dy]) => {
+          const type = patch.at(tile.col + dx, tile.row + dy);
+          return type === TERRAIN.rubble || type === TERRAIN.door;
+        });
+        if (roadside) {
+          ctx.fillStyle = '#a2adb622';
+          ctx.fillRect(x + 1, y + 1, size - 2, size - 2);
+          const stain = ctx.createRadialGradient(x + 14, y + 14, 1, x + 14, y + 14, 18);
+          stain.addColorStop(0, '#283e4880');
+          stain.addColorStop(1, '#283e4800');
+          ctx.fillStyle = stain;
+          ctx.fillRect(x, y, size, size);
+        }
+      }
+      for (let dot = 0; dot < 22; dot++) {
         const grain = random();
-        ctx.fillStyle = grain > 0.55 ? '#24322536' : '#f9dcad47';
-        ctx.fillRect(x + random() * size, y + random() * size, 0.6 + grain * 2.7, 0.65 + grain * 1.5);
+        ctx.fillStyle = grain > 0.55 ? '#162c3536' : '#e6cba12c';
+        ctx.fillRect(x + random() * size, y + random() * size, 0.5 + grain * 1.5, 0.55 + grain * 0.95);
       }
       if (tile.type === TERRAIN.square) {
         ctx.fillStyle = '#50463158';
@@ -162,7 +180,7 @@ class Renderer {
           }
         }
       }
-      if (tile.type === TERRAIN.rubble || tile.type === TERRAIN.door) this.ruin(ctx, x, y, roll);
+      if (tile.type === TERRAIN.rubble || tile.type === TERRAIN.door) this.ruin(ctx, tile, patch, roll);
     }
     ctx.strokeStyle = district ? '#d1ba8b4f' : '#cbb88d87';
     ctx.lineWidth = 10;
@@ -174,35 +192,59 @@ class Renderer {
     return { canvas, land, coast };
   }
 
-  ruin(ctx, x, y, variant) {
+  ruin(ctx, tile, patch, variant) {
+    const { x, y, col, row } = tile;
+    const extendsTo = (dx, dy) => {
+      const type = patch.at(col + dx, row + dy);
+      return type === TERRAIN.rubble || type === TERRAIN.door;
+    };
     ctx.save();
-    ctx.translate(x + 14, y + 14);
-    ctx.rotate(variant * Math.PI / 2);
-    ctx.fillStyle = '#302f28ad';
-    ctx.fillRect(-11, -9, 24, 22);
-    ctx.fillStyle = '#4b5145';
-    ctx.fillRect(-9, -8, 19, 18);
-    ctx.fillStyle = '#313d37';
-    ctx.fillRect(-8, -7, 12, 10);
-    ctx.fillStyle = '#706751';
-    ctx.fillRect(-11, -11, 25, 5);
-    ctx.fillRect(-11, -8, 5, 21);
-    ctx.fillRect(8, -8, 5, 11 + variant * 3);
-    ctx.fillStyle = '#c1aa84';
-    ctx.fillRect(-12, -12, 23, 2);
-    ctx.fillRect(-12, -10, 3, 18);
-    ctx.fillRect(8, -10, 3, 8 + variant * 3);
-    for (let brick = -8; brick < 11; brick += 5) {
-      ctx.fillStyle = '#463d32a0';
-      ctx.fillRect(brick, -12, 1, 5);
+    ctx.translate(x, y);
+    const left = extendsTo(-1, 0) ? -14 : -11;
+    const top = extendsTo(0, -1) ? -14 : -11;
+    const right = extendsTo(1, 0) ? 14 : 11;
+    const bottom = extendsTo(0, 1) ? 14 : 11;
+    const width = right - left;
+    const height = bottom - top;
+    ctx.fillStyle = '#081620b4';
+    ctx.fillRect(left + 1, top + 3, width + 3, height + 2);
+    ctx.fillStyle = '#30464b';
+    ctx.fillRect(left, top, width, height);
+    const wall = ['#8f7664', '#768989', '#a17e67'][variant];
+    ctx.fillStyle = wall;
+    if (top !== -14) ctx.fillRect(left, top, width, 4);
+    if (left !== -14) ctx.fillRect(left, top, 4, height);
+    if (right !== 14) ctx.fillRect(right - 3, top + 1, 3, height * 0.74);
+    if (bottom !== 14) ctx.fillRect(left + 3, bottom - 2, width * 0.58, 2);
+    ctx.fillStyle = '#ccb59a91';
+    if (top !== -14) ctx.fillRect(left + 1, top, width - 2, 1);
+    if (left !== -14) ctx.fillRect(left, top + 1, 1, height - 2);
+    ctx.fillStyle = '#142933';
+    ctx.fillRect(-7, -6, 14, 13);
+    if (variant === 0) {
+      ctx.fillStyle = '#78938e';
+      ctx.fillRect(-5, -5, 1, 11);
+      ctx.fillRect(-4, 3, 8, 1);
+    } else {
+      const roof = ctx.createLinearGradient(-7, -7, 7, 7);
+      roof.addColorStop(0, variant === 1 ? '#688c91' : '#a56d59');
+      roof.addColorStop(1, '#395362');
+      ctx.fillStyle = roof;
+      ctx.beginPath();
+      ctx.moveTo(-7, -7);
+      ctx.lineTo(8, -7);
+      ctx.lineTo(8, 0);
+      ctx.lineTo(1, 0);
+      ctx.lineTo(-2, 5);
+      ctx.lineTo(-8, 4);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#dfad876e';
+      for (let beam = -5; beam < 7; beam += 3) ctx.fillRect(beam, -6, 0.65, 5);
     }
-    ctx.fillStyle = '#968668';
-    ctx.fillRect(-3, 3, 4, 3);
-    ctx.fillRect(4, 8, 3, 3);
-    ctx.fillRect(7, 6, 3, 2);
-    ctx.fillStyle = '#6b774b';
-    ctx.fillRect(1, -8, 5, 2);
-    ctx.fillRect(-9, 7, 3, 4);
+    ctx.fillStyle = wall;
+    ctx.fillRect(4, 7, 2, 2);
+    ctx.fillRect(-6, 7, 3, 1);
     ctx.restore();
   }
 
@@ -210,12 +252,12 @@ class Renderer {
     const ctx = this.ctx;
     const district = this.districtLayer();
     const water = game.tide.water;
-    const night = 1 - water;
+    const night = 0.38 + (1 - water) * 0.62;
     const waterMask = game.tide.exposed ? district.waterMask : this.openWater;
     ctx.drawImage(this.sea, 0, 0, VIEW.width, VIEW.height);
     this.waves(game.time, 1);
     ctx.globalAlpha = 1 - water * 0.68;
-    ctx.drawImage(district.canvas, 0, 0);
+    ctx.drawImage(district.canvas, 0, 0, VIEW.width, VIEW.height);
     ctx.globalAlpha = 1;
     if (water > 0.01) {
       ctx.save();
@@ -226,11 +268,11 @@ class Renderer {
       ctx.restore();
     }
     this.surf(district.coast, game.time, 1 - water * 0.9);
-    ctx.drawImage(this.harbor.canvas, 0, 0);
+    ctx.drawImage(this.harbor.canvas, 0, 0, VIEW.width, VIEW.height);
     this.surf(this.harbor.coast, game.time, 1);
-    this.harborDetails(game.harbor);
+    this.harborDetails(game.harbor, game.time);
 
-    ctx.fillStyle = `rgba(6, 16, 37, ${night * 0.48})`;
+    ctx.fillStyle = `rgba(6, 16, 37, ${night * 0.37})`;
     ctx.fillRect(0, 0, VIEW.width, VIEW.height);
     ctx.fillStyle = this.vignette;
     ctx.fillRect(0, 0, VIEW.width, VIEW.height);
@@ -240,50 +282,54 @@ class Renderer {
     if (game.tide.exposed) {
       const action = game.interaction;
       if (action?.type === 'land') this.ring(action.landing.x, action.landing.y, 12, '#ffe1a6', game.time);
-      for (const piece of game.expedition.loot) this.debris(piece, game.time);
       this.drawExpedition(game.expedition, game.time);
     }
     const anchored = game.mode === 'foot';
-    const hasSema = game.cargo.includes(RELICS.cog);
     this.drawBoat(game.boat, game.time, anchored, night, waterMask, anchored ? [] : game.cargo);
-    if (anchored) {
-      if (hasSema) this.drawEscort(game.walker);
-      this.drawWalker(game.walker);
+    if (anchored) this.drawWalker(game.walker, game.time);
+    const target = game.target;
+    if (target?.label === 'Batık kıyı') {
+      this.ring(target.point.x, target.point.y, 15, '#8fedd7', game.time);
+      this.glow(target.point.x, target.point.y, 22, 0.16);
     }
   }
 
   drawExpedition(trip, time) {
     const ctx = this.ctx;
-    if (trip.key) {
-      const { x, y } = trip.key;
-      this.glow(x, y, 17, 0.28);
-      ctx.strokeStyle = '#9debe8';
-      ctx.lineWidth = 1.7;
+    for (const site of trip.sites) {
+      const { x, y, opened } = site;
+      const active = trip.opening?.site === site;
+      const color = opened ? '#547178' : active ? '#ffd298' : '#98f5dd';
+      if (!opened) this.vaultLight(x, y, time, active);
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(Math.PI / 4);
+      ctx.fillStyle = '#10252c';
+      ctx.fillRect(-6, -6, 12, 12);
+      ctx.lineWidth = 1.15;
+      ctx.strokeStyle = color;
+      ctx.strokeRect(-6, -6, 12, 12);
+      ctx.fillStyle = color;
+      ctx.fillRect(-2.2, -2.2, 4.4, 4.4);
+      ctx.restore();
+      if (!active) continue;
+      ctx.strokeStyle = '#ffe3a7';
+      ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.arc(x - 3, y - 2, 3, 0, Math.PI * 2);
-      ctx.moveTo(x, y);
-      ctx.lineTo(x + 6, y + 5);
-      ctx.lineTo(x + 7, y + 2);
+      const angle = Math.PI * 2 * trip.opening.elapsed / site.seconds;
+      ctx.arc(x, y, 15, -Math.PI / 2, -Math.PI / 2 + angle);
       ctx.stroke();
     }
-    if (trip.house) {
-      const { x, y } = trip.house;
-      this.ring(x, y, 14, trip.hasKey ? '#ffcd81' : '#aa8f75', time);
-      ctx.strokeStyle = '#ffe1a0';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.arc(x, y - 2, 3, Math.PI, Math.PI * 2);
-      ctx.stroke();
-      ctx.fillStyle = '#e3a462';
-      ctx.fillRect(x - 4, y - 2, 8, 6);
-      if (trip.opening) {
-        ctx.strokeStyle = '#fff6d6';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(x, y, 17, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * trip.opening.elapsed / trip.opening.duration);
-        ctx.stroke();
-      }
-    }
+  }
+
+  vaultLight(x, y, time, active) {
+    const ctx = this.ctx;
+    const glow = ctx.createRadialGradient(x, y, 0, x, y, active ? 34 : 26);
+    const opacity = 0.28 + 0.1 * Math.sin(time * 2.4 + x);
+    glow.addColorStop(0, active ? '#ffbd688b' : `rgba(101, 250, 222, ${opacity})`);
+    glow.addColorStop(1, active ? '#ffbd6800' : '#65fade00');
+    ctx.fillStyle = glow;
+    ctx.fillRect(x - 35, y - 35, 70, 70);
   }
 
   waves(time, opacity) {
@@ -325,7 +371,7 @@ class Renderer {
     ctx.stroke();
   }
 
-  harborDetails(progress) {
+  harborDetails(progress, time) {
     const ctx = this.ctx;
     ctx.strokeStyle = '#c0ad816f';
     ctx.lineWidth = 16;
@@ -365,29 +411,77 @@ class Renderer {
     ctx.arc(x, y, 18, Math.PI * 0.12, Math.PI * 1.12);
     ctx.stroke();
     for (const building of progress.built) {
-      if (building.sprite === 'shed') {
+      if (building.sprite === 'forge') {
         const { x, y } = building;
-        ctx.fillStyle = '#333930';
-        ctx.fillRect(x - 13, y - 9, 31, 24);
-        ctx.fillStyle = '#704a37';
-        ctx.fillRect(x - 14, y - 11, 29, 24);
-        ctx.fillStyle = '#503a32';
-        ctx.fillRect(x - 4, y + 7, 8, 6);
-        ctx.fillStyle = '#a86648';
-        ctx.fillRect(x - 16, y - 13, 32, 11);
-        ctx.fillStyle = '#814734';
-        ctx.fillRect(x - 16, y - 2, 32, 10);
-        ctx.fillStyle = '#d1966b';
-        ctx.fillRect(x - 15, y - 3, 30, 1.5);
-        for (let seam = x - 11; seam < x + 15; seam += 6) {
-          ctx.fillStyle = '#3e2d254a';
-          ctx.fillRect(seam, y - 12, 1, 19);
+        ctx.fillStyle = '#111b218a';
+        ctx.fillRect(x - 17, y - 11, 55, 40);
+        const roof = ctx.createLinearGradient(x, y - 16, x, y + 17);
+        roof.addColorStop(0, '#b97857');
+        roof.addColorStop(0.5, '#875144');
+        roof.addColorStop(0.53, '#483c3b');
+        roof.addColorStop(1, '#654138');
+        ctx.fillStyle = roof;
+        ctx.fillRect(x - 23, y - 15, 49, 33);
+        ctx.strokeStyle = '#d8956a';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x - 23, y - 15, 49, 33);
+        ctx.fillStyle = '#f0b376';
+        ctx.fillRect(x - 15, y + 16, 10, 3);
+        ctx.fillRect(x + 7, y + 16, 9, 3);
+        this.disc(x + 17, y - 13, 10, '#2b2a2b');
+        this.disc(x + 16, y - 16, 7, '#aa6249');
+        this.disc(x + 16, y - 16, 4.5, '#252427');
+        for (let i = 0; i < 6; i++) {
+          const flight = (time * 0.43 + i / 6) % 1;
+          const tone = (1 - flight) * 0.18;
+          this.disc(x + 16 + flight * 26, y - 16 - flight * 32, 4 + flight * 12, `rgba(226, 187, 163, ${tone})`);
         }
+        this.crane(279, 329, 0.65);
+      } else if (building.sprite === 'crane') {
+        this.crane(building.x, building.y, 1.05);
       } else {
-        this.disc(building.x, building.y, 7, '#594537');
-        this.disc(building.x - 1, building.y - 1, 4.5, '#bd975f');
+        this.disc(building.x + 3, building.y + 4, 13, '#172827');
+        this.disc(building.x, building.y, 10, '#aa8460');
+        this.disc(building.x, building.y, 6, '#f7d293');
       }
     }
+  }
+
+  crane(x, y, size) {
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(size, size);
+    ctx.fillStyle = '#111b21ad';
+    ctx.fillRect(-12, -7, 28, 23);
+    ctx.fillStyle = '#725745';
+    ctx.fillRect(-15, -10, 27, 22);
+    ctx.strokeStyle = '#30272a';
+    ctx.lineWidth = 7;
+    ctx.beginPath();
+    ctx.moveTo(0, 7);
+    ctx.lineTo(-6, -35);
+    ctx.lineTo(47, -18);
+    ctx.stroke();
+    ctx.strokeStyle = '#d59c68';
+    ctx.lineWidth = 2.3;
+    ctx.beginPath();
+    ctx.moveTo(0, 5);
+    ctx.lineTo(-6, -35);
+    ctx.lineTo(47, -18);
+    ctx.lineTo(10, -20);
+    ctx.lineTo(0, 5);
+    ctx.stroke();
+    ctx.lineWidth = 1.2;
+    ctx.strokeStyle = '#eda979';
+    ctx.beginPath();
+    ctx.moveTo(47, -18);
+    ctx.lineTo(48, 9);
+    ctx.lineTo(44, 12);
+    ctx.lineTo(42, 9);
+    ctx.stroke();
+    this.disc(47, -18, 2.7, '#ffdeb1');
+    ctx.restore();
   }
 
   lights(game, night, waterMask) {
@@ -441,20 +535,6 @@ class Renderer {
     const { x, y } = this.world.dock;
     this.ring(x, y, 9, '#ffcc82', time);
     this.disc(x, y, 2, '#fff0b2');
-  }
-
-  debris(piece, time) {
-    const ctx = this.ctx;
-    const pulse = 0.48 + Math.sin(time * 4 + piece.x) * 0.17;
-    this.glow(piece.x, piece.y, 15, pulse);
-    ctx.save();
-    ctx.translate(piece.x, piece.y);
-    ctx.rotate(Math.PI / 4 + piece.kind * 0.23);
-    ctx.fillStyle = ['#ffdd8e', '#f7b77b', '#ffe9bd'][piece.kind];
-    ctx.fillRect(-3.5, -3.5, 7, 7);
-    ctx.fillStyle = '#fff2ca';
-    ctx.fillRect(-3.5, -3.5, 7, 1.5);
-    ctx.restore();
   }
 
   drawBoat(boat, time, anchored, night, waterMask, cargo) {
@@ -522,10 +602,6 @@ class Renderer {
     ctx.fillRect(-14, -2.4, 0.9, 3.7);
     this.disc(7, 0, 2.7, '#5c4033');
     this.disc(7, 0, 1.4 + night * 0.45, '#fff0bc');
-    if (cargo.includes(RELICS.cog)) {
-      this.disc(-3, -4.5, 2.6, '#487d80');
-      this.disc(-2.6, -4.7, 1.35, '#efd2b0');
-    }
     ctx.restore();
   }
 
@@ -563,24 +639,25 @@ class Renderer {
     ctx.restore();
   }
 
-  drawWalker(walker) {
+  drawWalker(walker, time) {
     const ctx = this.ctx;
+    this.glow(walker.x, walker.y, 24, 0.23);
     ctx.save();
     ctx.translate(walker.x, walker.y);
     ctx.rotate(walker.heading);
-    this.disc(0, 0, 7, '#332a2e');
-    this.disc(0, 0, 5.5, '#ce7957');
-    this.disc(2, 0, 3.4, '#ffdfa6');
+    const pace = walker.moving ? Math.sin(time * 16) * 2.3 : 0;
+    ctx.fillStyle = '#14212b';
+    ctx.fillRect(-7 + pace, -4, 6, 2.5);
+    ctx.fillRect(-7 - pace, 1.5, 6, 2.5);
+    ctx.fillStyle = '#b86c52';
+    ctx.beginPath();
+    ctx.ellipse(-1.3, 0, 5.2, 6.2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#6a3d38';
+    ctx.fillRect(-4.5, -3, 3, 6);
+    this.disc(2.1, 0, 3.6, '#ebb37e');
+    this.disc(3.8, -0.2, 1.35, '#fff0c2');
     ctx.restore();
-  }
-
-  drawEscort(walker) {
-    const x = walker.x - Math.cos(walker.heading) * 13;
-    const y = walker.y - Math.sin(walker.heading) * 13;
-    if (!this.world.canOccupy(x, y, 4, 'foot', true)) return;
-    this.disc(x, y, 5.5, '#263943');
-    this.disc(x, y, 4.3, '#6ba0a2');
-    this.disc(x + 1, y - 1, 2.5, '#efd2b0');
   }
 
   ring(x, y, radius, color, time) {

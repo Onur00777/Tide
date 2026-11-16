@@ -1,33 +1,33 @@
 # TIDE
 
-Tide (Gelgit), tarayıcıda çalışan yukarıdan görünümlü bir 2B keşif ve liman kurma RPG prototipi. Düşük suda açılan üç mahalleye sefer yap. Nadir buluntuları iskeleye getirdikçe limanı geliştir, yeni rotalar aç ve kıyının hikâyesini günlüğe işle.
+Tide (Gelgit), tam ekran kamerayla oynanan bir kıyı keşif oyunu. Sular çekilince batık mahallelerdeki kasaları aç, buluntuları koleksiyona kat ve limana yeni yapılar kur.
 
 ## Çalıştırma
 
-Bu klasördeki `index.html` dosyasını tarayıcıda aç. Kurulum veya yerel sunucu gerekmez.
+Bu klasördeki `index.html` dosyasını tarayıcıda aç. Kurulum veya yerel sunucu gerekmez. Cinzel ve Inter yazı tipleri Google Fonts üzerinden yüklenir.
 
 ## Kontroller
 
 - **WASD** veya **ok tuşları** ile tekneyi ve karakteri hareket ettir.
-- Tekne kademeli hızlanır. Yön tuşunu bıraktığında yavaşlayarak durur. Kıyıya yaklaşırken süzülme payı bırakabilirsin.
-- **E** ile karaya çık, kilitli bir evi aç, tekneye geri bin veya iskelede yükünü teslim et.
-- Hurdaları ve mavi anahtarı üzerinden yürüyerek al. Anahtarı bulduktan sonra evin kilidini açmak için kısa süre yerinde dur.
+- **E** veya ekrandaki etkileşim düğmesiyle karaya çık, kasayı aç, tekneye bin ya da buluntuları indir.
+- Kasayı açarken yerinde dur. Hareket edersen işlem kesilir.
 - **Esc** ile oyunu duraklat veya sürdür.
-- Üst çubuktan günlüğü açabilir ve sesi kapatabilirsin. Ses, ilk tıklama veya tuş basımından sonra etkinleşir.
+- Üst çubuktan koleksiyonunu açabilir ve sesi kapatabilirsin. Ses ilk tıklama veya tuş basımından sonra etkinleşir.
 
 ## Sefer
 
-Yayadayken sayaç taşkına kalan süreyi, alt bant ise tekneye tahmini dönüş süresini gösterir. Yükselme evresi 8 saniye sürer ve su yürüyüşü yavaşlatır. Taşkına yaya yakalanırsan teslim edilmemiş yükün kaybolur.
+Çekilmeden taşkına 100 saniye var. Kasaların yeri seferden sefere değişir ve kasalar 5–12 saniyede açılır. Son 14 saniyede yükselen su yürüyüşü yavaşlatır. Taşkına yaya yakalanırsan teslim edilmemiş yükün kaybolur.
 
-İlk hedef için Kayıp Kaptan’ın Günlüğü ve 3 hurda teslim et. Liman hedefleri sıradaki rotayı ve ödülü gösterir. Daha önce nadir buluntu çıkardığın bir evi yeniden açtığında, bir yük yuvası kaplayan ve 4 hurda değerinde olan bir derin sandık bulursun.
+İlk rotada Boğulmuş Kaptanın Günlüğü’nü bul. İskelede indirince **Yükselt** düğmesi açılır. Liman atölyesinden feneri, demirciyi ve derin su vincini kur. Atölyedeki rota düğmesiyle açık mahalleler arasında geçiş yap.
 
-İskelede teslim edilen hurda, buluntular ve sefer rekoru tarayıcı depolamasında saklanır. Açık sefer ve teslim edilmemiş yük sayfayı yenilediğinde sıfırlanır.
+Teslim edilen eserler ve inşa edilen yükseltmeler tarayıcıda saklanır. Açık sefer ve teslim edilmemiş yük sayfayı yenilediğinde sıfırlanır. Önceki sürümde kaydedilen koleksiyon eserleri aktarılır.
 
 ## Kod yapısı
 
 - `world.js` harita, çarpışma ve gelgit kurallarını tutar.
-- `expedition.js` mahalleleri, anahtar konumlarını ve sefer ganimetlerini tanımlar.
-- `progression.js` liman hedeflerini, kıyı günlüğünü ve yerel kaydı yönetir.
+- `expedition.js` mahalleleri, kasa konumlarını ve eserleri tanımlar.
+- `progression.js` koleksiyonu, liman yükseltmelerini ve yerel kaydı yönetir.
 - `game.js` tekne fiziğini ve oynanış etkileşimlerini yürütür.
-- `render.js` haritayı ve aktörleri çizer. `feedback.js` sesleri ve toplama efektlerini üretir.
+- `camera.js` tam ekran takip kamerasını yönetir. `render.js` haritayı ve aktörleri çizer.
+- `feedback.js` ortam olaylarının seslerini ve görsel efektlerini üretir.
 - `main.js` klavyeyi, arayüzü ve tarayıcı döngüsünü bağlar.

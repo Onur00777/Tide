@@ -3,8 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#0a131e">
-  <title>Gelgit — Kıyı Keşfi</title>
+  <meta name="theme-color" content="#071920">
+  <title>Gelgit — Batık Kıyı</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <script defer src="world.js"></script>
   <script defer src="expedition.js"></script>
@@ -12,61 +15,59 @@
   <script defer src="game.js"></script>
   <script defer src="feedback.js"></script>
   <script defer src="render.js"></script>
+  <script defer src="camera.js"></script>
   <script defer src="main.js"></script>
 </head>
 <body>
-  <main class="shell">
-    <header class="masthead">
-      <div class="brand"><span class="sigil" aria-hidden="true">≈</span><h1>Gelgit</h1></div>
-      <span class="edition">KIYI KEŞFİ <i></i> v0.2</span>
-      <div class="header-actions">
-        <button type="button" id="sound" aria-label="Oyun sesleri" aria-pressed="true">Ses açık</button>
-        <button type="button" id="journal-open" aria-haspopup="dialog">Günlük</button>
-        <button type="button" id="pause" aria-pressed="false">Duraklat</button>
-      </div>
+  <main class="game" id="game" aria-label="Gelgit">
+    <canvas class="scene" id="sea" aria-label="Gelgit keşif alanı">Canvas destekli bir tarayıcı gerekir.</canvas>
+    <div class="shade" aria-hidden="true"></div>
+
+    <header class="top">
+      <div class="brand"><i class="mark" aria-hidden="true"><b></b></i><h1>Gelgit</h1></div>
+      <section class="tide glass" id="tide" aria-label="Gelgit sayacı">
+        <div class="tide-readout"><span id="phase">Yüksek su</span><strong id="timer">0:10</strong></div>
+        <div class="track" id="tide-meter" role="progressbar" aria-label="Gelgit döngüsü" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="tide-fill"></i></div>
+      </section>
+      <nav class="toolbar" aria-label="Oyun seçenekleri">
+        <button id="collection-open" class="glass" type="button" aria-haspopup="dialog">Koleksiyon</button>
+        <button id="sound" class="glass" type="button" aria-pressed="true" aria-label="Oyun sesi">Ses</button>
+        <button id="pause" class="glass pause-button" type="button" aria-pressed="false" aria-label="Duraklat"><span aria-hidden="true">Ⅱ</span></button>
+      </nav>
     </header>
 
-    <section class="tide" id="tide" aria-label="Gelgit döngüsü">
-      <div class="tide-phase"><span class="eyebrow">GELGİT</span><strong id="phase">Yüksek su</strong></div>
-      <div class="tide-chart">
-        <div id="tide-meter" class="track" role="progressbar" aria-label="Gelgit döngüsü" aria-valuemin="0" aria-valuemax="50" aria-valuenow="0">
-          <span class="track-fill" id="tide-fill"></span><span class="needle" id="tide-needle"></span>
-        </div>
-        <div class="ticks" aria-hidden="true"><span>Yüksek</span><span>Çekilme</span><span>Düşük</span><span>Yükselme</span></div>
-      </div>
-      <div class="tide-clock"><strong id="timer">0:13</strong><span class="eyebrow" id="next-phase">ÇEKİLMEYE</span></div>
+    <div id="waypoint" class="waypoint glass" hidden><span id="waypoint-arrow" aria-hidden="true"></span><span id="waypoint-name"></span></div>
+    <div id="banner" class="banner" role="status" hidden><span id="banner-caption"></span><strong id="banner-title"></strong></div>
+
+    <section class="task" aria-label="Sefer hedefi">
+      <span class="eyebrow"><i></i><span id="mode">Teknede</span></span>
+      <h2 id="location">Başlangıç Limanı</h2>
+      <div class="objective"><span id="objective">Çekilmeyi bekle</span><span id="return-time" hidden></span></div>
+      <div class="cargo" id="cargo" aria-label="Yük"></div>
     </section>
 
-    <section class="viewport" id="viewport" aria-label="Gelgit oyun alanı">
-      <canvas id="sea" width="1100" height="620" aria-label="Başlangıç iskelesi ve Batık Mahalle haritası">Bu oyun Canvas destekli bir tarayıcı gerektirir.</canvas>
-      <div class="chart-label harbor-label"><small>01 / LİMAN</small><span>Başlangıç İskelesi</span></div>
-      <div class="chart-label district-label"><small>BATIK BÖLGE</small><span id="district">Fener Sokağı</span></div>
-      <div class="compass" aria-hidden="true"><span>K</span><b>◆</b></div>
-      <div id="notice" class="notice" role="status" hidden></div>
-      <div class="field-info"><span id="mode" class="mode">TEKNEDE</span><span id="objective">Batık Mahalle’nin kıyısına ilerle.</span><span id="return-time" class="return-time" hidden></span></div>
-      <div id="action" class="action" hidden><kbd>E</kbd> <span id="action-label"></span></div>
-      <div id="pause-layer" class="pause-layer" hidden><span>DURAKLATILDI</span></div>
+    <div class="interaction">
+      <button id="action" class="action glass" type="button" hidden><kbd>E</kbd><span id="action-label"></span></button>
+      <div id="opening" class="opening glass" hidden>
+        <span id="opening-label">Kasa açılıyor</span>
+        <progress id="opening-meter" max="1" value="0" aria-label="Kasa açma ilerlemesi"></progress>
+      </div>
+    </div>
+
+    <section id="harbor" class="harbor glass" aria-labelledby="harbor-title" hidden>
+      <div class="harbor-heading"><span class="eyebrow">Liman atölyesi</span><span class="harbor-icon" aria-hidden="true">◇</span></div>
+      <h2 id="harbor-title">Feneri Güçlendir</h2>
+      <p id="harbor-requirement">Boğulmuş Kaptanın Günlüğü</p>
+      <button id="upgrade" class="upgrade" type="button" disabled>Yükselt <span aria-hidden="true">↗</span></button>
+      <button id="route" class="route" type="button" hidden></button>
     </section>
 
-    <footer class="dashboard">
-      <div class="stats" aria-label="İlerleme">
-        <div><span class="eyebrow">YÜK</span><strong id="cargo">0 / 4</strong></div>
-        <div><span class="eyebrow">HURDA TESLİMİ</span><strong id="bank">0</strong></div>
-        <div><span class="eyebrow">LİMAN</span><strong id="level">Seviye 1</strong></div>
-        <div><span class="eyebrow">EN İYİ SEFER</span><strong id="record">0</strong></div>
-      </div>
-      <section class="mission" aria-labelledby="mission-title">
-        <span class="eyebrow">SIRADAKİ LİMAN HEDEFİ</span>
-        <strong id="mission-title">Feneri Güçlendir</strong>
-        <span id="mission-needs"></span>
-        <span id="mission-reward" class="mission-reward"></span>
-      </section>
-      <div class="keys" aria-label="Klavye kontrolleri"><span><kbd>WASD</kbd> <kbd>↑↓←→</kbd> Hareket</span><span><kbd>E</kbd> Etkileşim</span></div>
-    </footer>
+    <div class="controls" aria-label="Klavye kontrolleri"><kbd>WASD</kbd><span>Hareket</span><kbd>E</kbd><span>Etkileşim</span></div>
+    <div id="pause-layer" class="pause-layer" hidden><button class="glass" id="resume" type="button">Devam et</button></div>
 
-    <dialog id="journal-dialog" class="journal" aria-labelledby="journal-title">
-      <header><h2 id="journal-title">Kıyı günlüğü</h2><form method="dialog"><button type="submit">Kapat</button></form></header>
-      <div id="journal-entries"></div>
+    <dialog class="collection glass" id="collection" aria-labelledby="collection-title">
+      <header><h2 id="collection-title">Koleksiyon</h2><form method="dialog"><button type="submit" aria-label="Koleksiyonu kapat">×</button></form></header>
+      <div id="collection-items" class="collection-items"></div>
     </dialog>
   </main>
 </body>

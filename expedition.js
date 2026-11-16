@@ -1,17 +1,24 @@
 'use strict';
 
-const RELICS = {
-  journal: { id: 'journal', name: 'Kayıp Kaptan’ın Günlüğü', color: '#ffd68a' },
-  cog: { id: 'cog', name: 'Antik Çark', color: '#f2ad78' },
-  pearl: { id: 'pearl', name: 'Parlayan İnci', color: '#c6f5e2' },
-};
-
-const DEEP_CACHE = { name: 'Derin sandık', value: 4, color: '#e1a369' };
+const RELICS = Object.fromEntries([
+  ['journal', 'Boğulmuş Kaptanın Günlüğü', 'Günlük', '▤', '#f7c57a'],
+  ['cog', 'Paslı Çark', 'Mekanik', '⚙', '#ff9d6d'],
+  ['secret', 'Antik Sır', 'Sır', '✦', '#88f3de'],
+  ['signal', 'Son İşaret', 'Sır', '✦', '#88f3de'],
+  ['ledger', 'Kayıp Vardiya Defteri', 'Günlük', '▤', '#f7c57a'],
+  ['spring', 'Yosunlu Zemberek', 'Mekanik', '⚙', '#ff9d6d'],
+  ['seal', 'İsimsiz Lonca Mührü', 'Sır', '✦', '#88f3de'],
+  ['dial', 'Kırık Pusula Çarkı', 'Mekanik', '⚙', '#ff9d6d'],
+  ['weather', 'Kül Fırtınası Günlüğü', 'Günlük', '▤', '#f7c57a'],
+  ['pearl', 'Parlayan İnci', 'Sır', '✦', '#88f3de'],
+  ['tidebook', 'Derin Su Seyir Defteri', 'Günlük', '▤', '#f7c57a'],
+  ['rotor', 'Fenerin İlk Rotoru', 'Mekanik', '⚙', '#ff9d6d'],
+].map(([id, name, kind, icon, color]) => [id, { id, name, kind, icon, color }]));
 
 const DISTRICTS = [
-  { name: 'Fener Sokağı', house: 'Kaptanın Evi', relic: RELICS.journal, map: DISTRICT_MAP, tags: [[5, 6], [6, 3], [6, 8]] },
+  { name: 'Fener Sokağı', finds: ['journal', 'signal', 'ledger', 'spring'], map: DISTRICT_MAP },
   {
-    name: 'Eski Tersane', house: 'Demircinin Atölyesi', relic: RELICS.cog, tags: [[7, 3], [8, 6], [6, 10]],
+    name: 'Eski Tersane', finds: ['cog', 'seal', 'dial', 'weather'],
     map: [
       '       .......',
       '    ....###.....',
@@ -30,7 +37,7 @@ const DISTRICTS = [
     ],
   },
   {
-    name: 'İnci Mahallesi', house: 'İnci Tacirinin Kasası', relic: RELICS.pearl, tags: [[6, 6], [7, 9], [7, 12]],
+    name: 'İnci Mahallesi', finds: ['secret', 'pearl', 'tidebook', 'rotor'],
     map: [
       '        .......',
       '      ...##.....',
@@ -51,46 +58,67 @@ const DISTRICTS = [
   },
 ];
 
+const VAULTS = [
+  { label: 'Kapıcı Kasası', seconds: 5 },
+  { label: 'Mühürlü Sandık', seconds: 7 },
+  { label: 'Döküm Kasa', seconds: 9 },
+  { label: 'Zırhlı Kasa', seconds: 12 },
+];
+
+function shuffle(items) {
+  for (let i = items.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [items[i], items[j]] = [items[j], items[i]];
+  }
+  return items;
+}
+
 class Expedition {
   constructor(world) {
     this.world = world;
     this.district = DISTRICTS[0];
-    this.number = 0;
-    this.loot = [];
-    this.key = null;
-    this.hasKey = false;
-    this.house = null;
-    this.reward = null;
+    this.sites = [];
     this.opening = null;
   }
 
-  begin(district, securedRelic) {
-    this.number++;
+  begin(district, owned, cargo) {
     if (district !== this.district) this.world.setDistrict(district.map);
     this.district = district;
-    const tiles = this.world.district.tiles;
-    this.house = tiles.find(tile => tile.type === TERRAIN.door);
-    this.reward = securedRelic ? DEEP_CACHE : district.relic;
-    const [col, row] = district.tags[Math.floor(Math.random() * district.tags.length)];
-    this.key = this.house ? tiles.find(tile => tile.col === col && tile.row === row) : null;
-    this.hasKey = false;
     this.opening = null;
-    const choices = tiles.filter(tile => this.world.isWalkable(tile.type) && tile !== this.key);
-    this.loot = [];
-    for (let index = 0; index < 17; index++) {
-      const eligible = index < 5 ? choices.filter(tile => tile.col <= 5) : choices;
-      const tile = eligible[Math.floor(Math.random() * eligible.length)];
-      choices.splice(choices.indexOf(tile), 1);
-      this.loot.push({ x: tile.x, y: tile.y, kind: index % 3 });
+    const patch = this.world.district;
+    const candidates = shuffle(patch.tiles.filter(tile =>
+      (tile.type === TERRAIN.rubble || tile.type === TERRAIN.door) && tile.col >= 4 && tile.col <= 16
+      && DIRECTIONS.some(([dx, dy]) => this.world.isWalkable(patch.at(tile.col + dx, tile.row + dy)))));
+    const spots = [];
+    for (const tile of candidates) {
+      if (spots.some(existing => distance(existing, tile) < 57)) continue;
+      spots.push(tile);
+      if (spots.length === VAULTS.length) break;
     }
+    for (const tile of candidates) {
+      if (spots.length === VAULTS.length) break;
+      if (!spots.includes(tile)) spots.push(tile);
+    }
+    const finds = district.finds.map(id => RELICS[id]);
+    const uncollected = shuffle(finds.filter(item => !owned.has(item.id) && !cargo.includes(item)));
+    const documented = shuffle(finds.filter(item => !uncollected.includes(item)));
+    const rewards = [...uncollected, ...documented];
+    this.sites = spots.map((tile, index) => ({ ...tile, ...VAULTS[index], item: rewards[index], opened: false }));
   }
 
   end() {
-    this.loot = [];
-    this.key = null;
-    this.house = null;
-    this.reward = null;
-    this.hasKey = false;
+    this.sites = [];
     this.opening = null;
+  }
+
+  nearest(point, limit = Infinity) {
+    let nearest = null;
+    for (const site of this.sites) {
+      const range = distance(point, site);
+      if (site.opened || range >= limit) continue;
+      nearest = site;
+      limit = range;
+    }
+    return nearest;
   }
 }
