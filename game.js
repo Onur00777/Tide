@@ -6,12 +6,14 @@ class Actor {
   }
 
   move(dx, dy, seconds, canMove) {
-    this.moving = false;
     const length = Math.hypot(dx, dy);
-    if (!length) return;
+    const scale = length ? this.speed * seconds / length : 0;
+    this.moveBy(dx * scale, dy * scale, canMove);
+    if (length) this.heading = Math.atan2(dy, dx);
+  }
 
-    const stepX = dx / length * this.speed * seconds;
-    const stepY = dy / length * this.speed * seconds;
+  moveBy(stepX, stepY, canMove) {
+    this.moving = false;
     if (stepX && canMove(this.x + stepX, this.y)) {
       this.x += stepX;
       this.moving = true;
@@ -20,7 +22,50 @@ class Actor {
       this.y += stepY;
       this.moving = true;
     }
-    this.heading = Math.atan2(dy, dx);
+  }
+}
+
+class Boat extends Actor {
+  constructor(x, y) {
+    super(x, y, 11, 187);
+    this.stop();
+  }
+
+  get currentSpeed() { return Math.hypot(this.velocityX, this.velocityY); }
+
+  move(dx, dy, seconds, canMove) {
+    const input = Math.hypot(dx, dy);
+    if (!input && this.currentSpeed < 4) {
+      this.stop();
+      return;
+    }
+
+    const throttle = input ? this.speed / input : 0;
+    const targetX = dx * throttle;
+    const targetY = dy * throttle;
+    const response = input ? 6.5 : 4.2;
+    const blend = -Math.expm1(-response * seconds);
+    const x = this.x;
+    const y = this.y;
+
+    // Integrate the velocity change over the frame so coasting is consistent across refresh rates.
+    const stepX = targetX * seconds + (this.velocityX - targetX) * blend / response;
+    const stepY = targetY * seconds + (this.velocityY - targetY) * blend / response;
+    this.velocityX += (targetX - this.velocityX) * blend;
+    this.velocityY += (targetY - this.velocityY) * blend;
+    this.moveBy(stepX, stepY, canMove);
+    if (stepX && this.x === x) this.velocityX = 0;
+    if (stepY && this.y === y) this.velocityY = 0;
+    if (this.currentSpeed > 4) {
+      const turn = Math.atan2(this.velocityY, this.velocityX) - this.heading;
+      this.heading += Math.atan2(Math.sin(turn), Math.cos(turn)) * -Math.expm1(-10 * seconds);
+    }
+  }
+
+  stop() {
+    this.velocityX = 0;
+    this.velocityY = 0;
+    this.moving = false;
   }
 }
 
@@ -38,7 +83,7 @@ class Game {
     this.world = new World();
     this.tide = new Tide();
     this.harbor = new HarborProgress();
-    this.boat = new Actor(411, 348, 11, 187);
+    this.boat = new Boat(411, 348);
     this.walker = new Actor(0, 0, 6, 124);
     this.mode = 'boat';
     this.cargo = 0;
@@ -72,7 +117,10 @@ class Game {
     if (index === 1) this.notify('Su çekiliyor. Kıyı açıldığında tekneden inebilirsin.');
     if (index === 2) {
       const grounded = !this.world.canOccupy(this.boat.x, this.boat.y, this.boat.radius, 'boat', true);
-      if (grounded) Object.assign(this.boat, this.world.nearestWater(this.boat));
+      if (grounded) {
+        Object.assign(this.boat, this.world.nearestWater(this.boat));
+        this.boat.stop();
+      }
       this.loot = this.world.spawnLoot();
       this.notify(grounded ? 'Mahalle açıldı. Teknen kıyıdaki derin suya alındı.' : 'Mahalle açıldı. Kıyıda E ile tekneden in.');
     }
@@ -123,7 +171,7 @@ class Game {
       this.walker.y = action.landing.y;
       this.walker.heading = this.boat.heading;
       this.walker.moving = false;
-      this.boat.moving = false;
+      this.boat.stop();
       this.mode = 'foot';
     }
     if (action.type === 'deliver') this.deliver();
@@ -135,6 +183,7 @@ class Game {
   }
 
   deliver() {
+    this.boat.stop();
     const before = this.harbor.level;
     const capacity = this.harbor.capacity;
     const delivered = this.cargo;
