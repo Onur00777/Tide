@@ -35,6 +35,11 @@ class Renderer {
     })));
     this.harbor = this.paintPatch(world.harbor, false);
     this.district = this.paintPatch(world.district, true);
+    this.openWater = new Path2D();
+    this.openWater.rect(0, 0, VIEW.width, VIEW.height);
+    this.openWater.addPath(this.harbor.land);
+    this.lowWater = new Path2D(this.openWater);
+    this.lowWater.addPath(this.district.land);
     const ctx = this.ctx;
     this.sea = this.paintSea();
     this.vignette = ctx.createRadialGradient(550, 286, 125, 550, 286, 635);
@@ -161,19 +166,35 @@ class Renderer {
   }
 
   ruin(ctx, x, y, variant) {
-    ctx.fillStyle = '#33423d';
-    ctx.fillRect(x + 1, y + 1, 26, 26);
-    ctx.fillStyle = '#182f32';
-    ctx.fillRect(x + 5, y + 5, 18, 18);
-    ctx.fillStyle = '#a19b7b';
-    ctx.fillRect(x + 1, y + 1, 5, 23);
-    ctx.fillRect(x + 1, y + 1, variant === 0 ? 16 : 25, 5);
-    ctx.fillStyle = '#666b57';
-    ctx.fillRect(x + 23, y + 5, 4, 11 + variant * 4);
-    ctx.fillRect(x + 10 + variant * 2, y + 22, 16 - variant * 2, 5);
-    ctx.fillStyle = '#77745f';
-    ctx.fillRect(x + 9, y + 9, 5, 3);
-    ctx.fillRect(x + 16, y + 15, 4, 5);
+    ctx.save();
+    ctx.translate(x + 14, y + 14);
+    ctx.rotate(variant * Math.PI / 2);
+    ctx.fillStyle = '#302f28ad';
+    ctx.fillRect(-11, -9, 24, 22);
+    ctx.fillStyle = '#4b5145';
+    ctx.fillRect(-9, -8, 19, 18);
+    ctx.fillStyle = '#313d37';
+    ctx.fillRect(-8, -7, 12, 10);
+    ctx.fillStyle = '#706751';
+    ctx.fillRect(-11, -11, 25, 5);
+    ctx.fillRect(-11, -8, 5, 21);
+    ctx.fillRect(8, -8, 5, 11 + variant * 3);
+    ctx.fillStyle = '#c1aa84';
+    ctx.fillRect(-12, -12, 23, 2);
+    ctx.fillRect(-12, -10, 3, 18);
+    ctx.fillRect(8, -10, 3, 8 + variant * 3);
+    for (let brick = -8; brick < 11; brick += 5) {
+      ctx.fillStyle = '#463d32a0';
+      ctx.fillRect(brick, -12, 1, 5);
+    }
+    ctx.fillStyle = '#968668';
+    ctx.fillRect(-3, 3, 4, 3);
+    ctx.fillRect(4, 8, 3, 3);
+    ctx.fillRect(7, 6, 3, 2);
+    ctx.fillStyle = '#6b774b';
+    ctx.fillRect(1, -8, 5, 2);
+    ctx.fillRect(-9, 7, 3, 4);
+    ctx.restore();
   }
 
   draw(game) {
@@ -208,7 +229,8 @@ class Renderer {
       if (action?.type === 'land') this.ring(action.landing.x, action.landing.y, 12, '#ffe1a6', game.time);
       for (const piece of game.loot) this.debris(piece, game.time);
     }
-    this.drawBoat(game.boat, game.time, game.mode === 'foot', night);
+    const waterMask = game.tide.exposed ? this.lowWater : this.openWater;
+    this.drawBoat(game.boat, game.time, game.mode === 'foot', night, waterMask);
     if (game.mode === 'foot') this.drawWalker(game.walker);
   }
 
@@ -265,9 +287,12 @@ class Renderer {
     ctx.lineTo(190, 398);
     ctx.stroke();
     for (const [x, y, r] of [[100, 322, 8], [154, 257, 10], [212, 255, 8], [242, 274, 9], [108, 383, 11], [110, 409, 6], [210, 436, 9], [260, 371, 10]]) {
-      this.disc(x + 2, y + 4, r + 2, '#343f31');
-      this.disc(x, y, r, '#54694b');
-      this.disc(x - 2, y - 2, r * 0.65, '#6b8056');
+      this.disc(x + 4, y + 5, r, '#283b2b99');
+      this.disc(x, y, r * 0.75, '#3a5540');
+      this.disc(x - r * 0.45, y + r * 0.16, r * 0.55, '#506b46');
+      this.disc(x + r * 0.47, y - r * 0.14, r * 0.57, '#4d6742');
+      this.disc(x - r * 0.18, y - r * 0.43, r * 0.62, '#6f854e');
+      this.disc(x - r * 0.32, y - r * 0.53, r * 0.28, '#8d9a58');
     }
     for (const x of [292, 318, 344, 368]) {
       for (const y of [322, 374]) {
@@ -278,40 +303,63 @@ class Renderer {
     const { x, y } = this.world.lighthouse;
     this.disc(x + 4, y + 5, 20, '#283a36');
     this.disc(x, y, 18, '#d6c29b');
-    this.disc(x, y, 14, '#914d39');
-    this.disc(x, y, 9, '#e3c089');
+    this.disc(x, y, 15.5, '#785b48');
+    this.disc(x - 0.5, y - 0.5, 13, '#a5543c');
+    this.disc(x - 1, y - 1, 10.5, '#433a35');
+    this.disc(x, y, 8.8, '#d3a56c');
+    ctx.strokeStyle = '#433a35';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.arc(x, y, 18, Math.PI * 0.12, Math.PI * 1.12);
+    ctx.stroke();
     for (const building of progress.built) {
       if (building.sprite === 'shed') {
         const { x, y } = building;
         ctx.fillStyle = '#333930';
         ctx.fillRect(x - 13, y - 9, 31, 24);
-        ctx.fillStyle = '#8e523b';
-        ctx.fillRect(x - 15, y - 12, 30, 24);
-        ctx.fillStyle = '#bc7955';
-        ctx.fillRect(x - 15, y - 12, 30, 10);
+        ctx.fillStyle = '#704a37';
+        ctx.fillRect(x - 14, y - 11, 29, 24);
         ctx.fillStyle = '#503a32';
         ctx.fillRect(x - 4, y + 7, 8, 6);
+        ctx.fillStyle = '#a86648';
+        ctx.fillRect(x - 16, y - 13, 32, 11);
+        ctx.fillStyle = '#814734';
+        ctx.fillRect(x - 16, y - 2, 32, 10);
+        ctx.fillStyle = '#d1966b';
+        ctx.fillRect(x - 15, y - 3, 30, 1.5);
+        for (let seam = x - 11; seam < x + 15; seam += 6) {
+          ctx.fillStyle = '#3e2d254a';
+          ctx.fillRect(seam, y - 12, 1, 19);
+        }
       } else {
         this.disc(building.x, building.y, 7, '#594537');
+        this.disc(building.x - 1, building.y - 1, 4.5, '#bd975f');
       }
     }
   }
 
   lights(game, night) {
+    const ctx = this.ctx;
     const { x, y } = this.world.lighthouse;
+    ctx.save();
+    ctx.clip(game.tide.exposed ? this.lowWater : this.openWater, 'evenodd');
+    this.reflect(x, y, 97, night * 0.47, game.time);
+    this.reflect(game.boat.x, game.boat.y, 36, 0.11 + night * 0.57, game.time);
+    ctx.restore();
     this.glow(x, y, 66 + night * 35, 0.29 + night * 0.46);
     if (night > 0.05) {
-      const ctx = this.ctx;
       const angle = game.time * 0.58;
-      const beam = ctx.createRadialGradient(x, y, 4, x, y, 163);
-      beam.addColorStop(0, `rgba(255, 221, 149, ${night * 0.38})`);
-      beam.addColorStop(1, '#ffd48d00');
-      ctx.fillStyle = beam;
-      ctx.beginPath();
-      ctx.moveTo(x, y);
-      ctx.arc(x, y, 163, angle - 0.16, angle + 0.16);
-      ctx.closePath();
-      ctx.fill();
+      for (const [width, intensity] of [[0.27, 0.13], [0.18, 0.19], [0.095, 0.22]]) {
+        const beam = ctx.createRadialGradient(x, y, 5, x, y, 197);
+        beam.addColorStop(0, `rgba(255, 232, 171, ${night * intensity})`);
+        beam.addColorStop(1, '#ffd48d00');
+        ctx.fillStyle = beam;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.arc(x, y, 197, angle - width, angle + width);
+        ctx.closePath();
+        ctx.fill();
+      }
     }
     this.disc(x, y, 5, '#fff1bc');
     this.glow(game.boat.x, game.boat.y, 40 + night * 27, 0.2 + night * 0.58);
@@ -319,6 +367,21 @@ class Renderer {
       const radius = building.sprite === 'lamp' ? 53 : 32;
       this.glow(building.x, building.y, radius, 0.22 + night * 0.47);
       this.disc(building.x, building.y, 3, '#ffe9aa');
+    }
+  }
+
+  reflect(x, y, radius, brightness, time) {
+    if (brightness < 0.02) return;
+    const ctx = this.ctx;
+    for (let index = 0; index < 22; index++) {
+      const phase = index * 2.4 + time * (0.95 + index * 0.011);
+      const offsetY = (index / 21 - 0.43) * radius * 1.8;
+      const offsetX = Math.sin(phase) * radius * 0.8;
+      const falloff = 1 - Math.hypot(offsetX, offsetY) / radius;
+      if (falloff <= 0) continue;
+      const glint = 0.44 + 0.56 * Math.sin(phase) ** 2;
+      ctx.fillStyle = `rgba(255, 206, 129, ${brightness * falloff * glint})`;
+      ctx.fillRect(x + offsetX, y + offsetY, 4 + radius * 0.34 * falloff, 0.8 + falloff);
     }
   }
 
@@ -342,14 +405,19 @@ class Renderer {
     ctx.restore();
   }
 
-  drawBoat(boat, time, anchored, night) {
+  drawBoat(boat, time, anchored, night, waterMask) {
     const ctx = this.ctx;
     const speed = boat.currentSpeed / boat.speed;
     const roll = Math.sin(time * 2.8 + boat.x * 0.014 + boat.y * 0.023);
     if (anchored) this.ring(boat.x, boat.y, 21, '#f3ca8a', time);
+    if (boat.moving) {
+      ctx.save();
+      ctx.clip(waterMask, 'evenodd');
+      this.drawWake(boat, time, speed);
+      ctx.restore();
+    }
     ctx.save();
     ctx.translate(boat.x, boat.y);
-    if (boat.moving) this.drawWake(boat, time, speed);
     ctx.rotate(boat.heading + roll * 0.032);
     ctx.translate(0, roll * 0.8);
 
@@ -400,6 +468,7 @@ class Renderer {
     const length = 8 + speed * 45;
     const spread = 5 + speed * 10;
     ctx.save();
+    ctx.translate(boat.x, boat.y);
     ctx.rotate(Math.atan2(boat.velocityY, boat.velocityX));
     const foam = ctx.createLinearGradient(-length - 6, 0, -5, 0);
     foam.addColorStop(0, '#9bd0c300');
