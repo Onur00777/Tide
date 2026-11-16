@@ -28,7 +28,7 @@ class Keyboard {
 class Hud {
   constructor() {
     const ids = ['phase', 'timer', 'next-phase', 'tide-meter', 'tide-fill', 'tide-needle', 'notice', 'mode',
-      'objective', 'action', 'action-label', 'cargo', 'bank', 'level', 'district', 'pause', 'pause-layer',
+      'objective', 'action', 'action-label', 'cargo', 'bank', 'level', 'record', 'district', 'pause', 'pause-layer',
       'return-time', 'mission-title', 'mission-needs', 'mission-reward', 'journal-open', 'journal-dialog', 'journal-entries',
       'tide', 'viewport', 'sound'];
     this.ui = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
@@ -72,6 +72,7 @@ class Hud {
     if (onFoot) this.setText('return-time', `TEKNE ~${game.returnTime} SN`);
     this.setText('cargo', `${game.cargo.length} / ${harbor.capacity}`);
     this.setText('bank', String(harbor.delivered));
+    this.setText('record', String(harbor.bestHaul));
     this.setText('level', `Seviye ${harbor.level}`);
     this.drawMission(harbor);
     this.setText('pause', paused ? 'Devam et' : 'Duraklat');
@@ -86,7 +87,7 @@ class Hud {
     if (goal?.relic && !harbor.relics.has(goal.relic.id)) needs.push(goal.relic.name);
     this.setText('mission-title', goal?.title ?? 'Liman Yeniden Yaşıyor');
     this.setText('mission-needs', needs.join(' + '));
-    this.setText('mission-reward', goal ? `Ödül · ${goal.reward}` : 'Üç mahalleye de yeniden sefer yapabilirsin.');
+    this.setText('mission-reward', goal ? `Ödül · ${goal.reward}` : 'Derin sandıkları çıkar ve sefer rekorunu aş.');
   }
 
   drawJournal(harbor) {

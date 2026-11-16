@@ -123,7 +123,7 @@ class Game {
       if (moving) trip.opening = null;
       else {
         trip.opening.elapsed += seconds;
-        if (trip.opening.elapsed >= trip.opening.duration) this.recoverRelic();
+        if (trip.opening.elapsed >= trip.opening.duration) this.recoverReward();
       }
     }
     if (trip.key && distance(trip.key, this.walker) < 15) {
@@ -141,11 +141,13 @@ class Game {
     }
   }
 
-  recoverRelic() {
+  get canSwapScrap() { return this.cargo.some(item => !item.id && !item.value); }
+
+  recoverReward() {
     const trip = this.expedition;
-    const relic = trip.district.relic;
+    const reward = trip.reward;
     if (this.cargo.length === this.harbor.capacity) {
-      const scrap = this.cargo.findIndex(item => !item.id);
+      const scrap = this.cargo.findIndex(item => !item.id && !item.value);
       if (scrap === -1) {
         trip.opening = null;
         this.notify('Yük dolu. Önce limana dön.');
@@ -154,12 +156,14 @@ class Game {
       const [dropped] = this.cargo.splice(scrap, 1);
       trip.loot.push({ ...dropped, x: this.walker.x, y: this.walker.y });
     }
-    this.cargo.push(relic);
+    this.cargo.push(reward);
     trip.house = null;
     trip.opening = null;
     trip.hasKey = false;
     this.signal('relic', this.walker);
-    this.notify(relic.id === 'cog' ? 'Sema serbest! Çarkı al ve onu limana götür.' : `${relic.name} yükte. İskeleye ulaştır!`, 4);
+    if (reward.id === 'cog') this.notify('Sema serbest! Çarkı al ve onu limana götür.');
+    else if (reward.value) this.notify(`Derin sandık yükte. Limanda ${reward.value} hurda değerinde.`);
+    else this.notify(`${reward.name} yükte. İskeleye ulaştır!`);
   }
 
   onPhaseChange(index) {
@@ -195,8 +199,10 @@ class Game {
       if (trip.opening) return null;
       if (trip.house && distance(trip.house, this.walker) < 33) {
         if (!trip.hasKey) return { type: 'locked', label: 'Kilitli evi incele' };
-        const label = this.cargo.length === this.harbor.capacity ? 'Hurda bırakıp kilidi aç' : 'Kilitli evi aç';
-        return { type: 'unlock', label };
+        if (this.cargo.length === this.harbor.capacity) {
+          return this.canSwapScrap ? { type: 'unlock', label: 'Hurda bırakıp kilidi aç' } : null;
+        }
+        return { type: 'unlock', label: trip.reward.value ? 'Derin sandığı çıkar' : 'Kilitli evi aç' };
       }
       const nearBoat = distance(this.walker, this.boat) < 48 && this.world.hasClearLanding(this.boat, this.walker);
       return nearBoat ? { type: 'board', label: 'Tekneye bin' } : null;
@@ -213,7 +219,7 @@ class Game {
       if (this.threat === 'critical') return 'Dönüş riskli. Hemen tekneye dön!';
       if (this.expedition.opening) return 'Kilit açılıyor. Harekete geçersen işlem kesilir.';
       if (this.expedition.hasKey) return `${this.expedition.district.house} için kehribar işaretini izle.`;
-      if (this.cargo.length >= this.harbor.capacity) return 'Yük doldu. Limana dön veya nadir buluntu için hurda bırak.';
+      if (this.cargo.length >= this.harbor.capacity) return 'Yük doldu. Limana dön veya kilitli ev için hurda bırak.';
       return this.expedition.key ? 'Sokaklarda hurda ve mavi parlayan anahtarı ara.' : 'Buluntularını demir attığın tekneye götür.';
     }
     if (this.cargo.length) return 'Başlangıç İskelesi’nin ucunda E ile yükü teslim et.';
@@ -248,7 +254,8 @@ class Game {
 
   deliver() {
     this.boat.stop();
-    const total = this.cargo.length;
+    const deliveredBefore = this.harbor.delivered;
+    const recordBefore = this.harbor.bestHaul;
     const valuables = this.cargo.some(item => item.id);
     const lastUnlock = this.harbor.accept(this.cargo).at(-1);
     this.cargo = [];
@@ -256,7 +263,11 @@ class Game {
     this.signal(lastUnlock ? 'upgrade' : 'delivery', lastUnlock || this.world.dock);
     this.onDelivery(this.harbor);
     if (lastUnlock) this.notify(`Liman gelişti. ${lastUnlock.reward}.`, 7);
-    else this.notify(valuables ? 'Buluntu teslim edildi. Günlüğe yeni bir sayfa eklendi.' : `${total} hurda teslim edildi.`, 5);
+    else if (valuables) this.notify('Buluntu teslim edildi. Günlüğe yeni bir sayfa eklendi.', 5);
+    else {
+      const delivered = this.harbor.delivered - deliveredBefore;
+      this.notify(this.harbor.bestHaul > recordBefore ? `Yeni sefer rekoru. ${delivered} hurda teslim edildi.` : `${delivered} hurda teslim edildi.`, 5);
+    }
   }
 
   signal(type, { x, y }) { this.cues.push({ type, x, y }); }

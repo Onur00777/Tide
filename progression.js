@@ -23,6 +23,7 @@ const JOURNAL_ENTRIES = [
 class HarborProgress {
   constructor(saved = {}) {
     this.delivered = Number.isSafeInteger(saved.delivered) && saved.delivered >= 0 ? saved.delivered : 0;
+    this.bestHaul = Number.isSafeInteger(saved.bestHaul) && saved.bestHaul >= 0 ? saved.bestHaul : 0;
     const ids = Array.isArray(saved.relics) ? saved.relics : [];
     this.relics = new Set(ids.filter(id => Object.hasOwn(RELICS, id)));
   }
@@ -41,14 +42,16 @@ class HarborProgress {
 
   accept(cargo) {
     const finished = this.built.length;
+    const before = this.delivered;
     for (const item of cargo) {
       if (item.id) this.relics.add(item.id);
-      else this.delivered++;
+      else this.delivered += item.value ?? 1;
     }
+    this.bestHaul = Math.max(this.bestHaul, this.delivered - before);
     return this.built.slice(finished);
   }
 
-  snapshot() { return { delivered: this.delivered, relics: [...this.relics] }; }
+  snapshot() { return { delivered: this.delivered, bestHaul: this.bestHaul, relics: [...this.relics] }; }
 }
 
 class ProgressSave {

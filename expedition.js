@@ -6,6 +6,8 @@ const RELICS = {
   pearl: { id: 'pearl', name: 'Parlayan İnci', color: '#c6f5e2' },
 };
 
+const DEEP_CACHE = { name: 'Derin sandık', value: 4, color: '#e1a369' };
+
 const DISTRICTS = [
   { name: 'Fener Sokağı', house: 'Kaptanın Evi', relic: RELICS.journal, map: DISTRICT_MAP, tags: [[5, 6], [6, 3], [6, 8]] },
   {
@@ -58,6 +60,7 @@ class Expedition {
     this.key = null;
     this.hasKey = false;
     this.house = null;
+    this.reward = null;
     this.opening = null;
   }
 
@@ -66,7 +69,8 @@ class Expedition {
     if (district !== this.district) this.world.setDistrict(district.map);
     this.district = district;
     const tiles = this.world.district.tiles;
-    this.house = securedRelic ? null : tiles.find(tile => tile.type === TERRAIN.door);
+    this.house = tiles.find(tile => tile.type === TERRAIN.door);
+    this.reward = securedRelic ? DEEP_CACHE : district.relic;
     const [col, row] = district.tags[Math.floor(Math.random() * district.tags.length)];
     this.key = this.house ? tiles.find(tile => tile.col === col && tile.row === row) : null;
     this.hasKey = false;
@@ -85,6 +89,7 @@ class Expedition {
     this.loot = [];
     this.key = null;
     this.house = null;
+    this.reward = null;
     this.hasKey = false;
     this.opening = null;
   }
