@@ -395,13 +395,13 @@ class Renderer {
     if (night > 0.05) {
       const angle = game.time * 0.58;
       for (const [width, intensity] of [[0.27, 0.13], [0.18, 0.19], [0.095, 0.22]]) {
-        const beam = ctx.createRadialGradient(x, y, 5, x, y, 197);
+        const beam = ctx.createRadialGradient(x, y, 5, x, y, game.harbor.beam);
         beam.addColorStop(0, `rgba(255, 232, 171, ${night * intensity})`);
         beam.addColorStop(1, '#ffd48d00');
         ctx.fillStyle = beam;
         ctx.beginPath();
         ctx.moveTo(x, y);
-        ctx.arc(x, y, 197, angle - width, angle + width);
+        ctx.arc(x, y, game.harbor.beam, angle - width, angle + width);
         ctx.closePath();
         ctx.fill();
       }

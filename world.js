@@ -41,13 +41,6 @@ const PHASES = [
   { name: 'Su yükseliyor', next: 'TAŞKINA', seconds: 8, exposed: true },
 ];
 
-const UPGRADES = [
-  { total: 3, name: 'Kıyı feneri', sprite: 'lamp', x: 256, y: 295 },
-  { total: 7, name: 'Depo', sprite: 'shed', x: 173, y: 382, capacity: 6 },
-  { total: 12, name: 'Güney feneri', sprite: 'lamp', x: 152, y: 423 },
-  { total: 18, name: 'Atölye', sprite: 'shed', x: 231, y: 404, capacity: 8 },
-];
-
 function distance(a, b) {
   return Math.hypot(a.x - b.x, a.y - b.y);
 }

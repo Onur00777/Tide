@@ -69,25 +69,17 @@ class Boat extends Actor {
   }
 }
 
-class HarborProgress {
-  constructor() {
-    this.delivered = 0;
-    this.relics = new Set();
-  }
-
-  get built() { return UPGRADES.filter(upgrade => this.delivered >= upgrade.total); }
-  get next() { return UPGRADES.find(upgrade => this.delivered < upgrade.total); }
-  get level() { return this.built.length + 1; }
-  get capacity() { return this.built.reduce((capacity, upgrade) => upgrade.capacity ?? capacity, 4); }
-}
-
 class Game {
-  constructor() {
+  constructor(saved, onDelivery = () => {}) {
     this.world = new World();
     this.tide = new Tide();
+    this.harbor = new HarborProgress(saved);
     this.expedition = new Expedition(this.world);
-    this.harbor = new HarborProgress();
+    this.expedition.district = this.nextDistrict;
+    if (this.nextDistrict !== DISTRICTS[0]) this.world.setDistrict(this.nextDistrict.map);
+    this.onDelivery = onDelivery;
     this.boat = new Boat(411, 348);
+    this.boat.speed = this.harbor.boatSpeed;
     this.walker = new Actor(0, 0, 6, 106);
     this.mode = 'boat';
     this.cargo = [];
@@ -97,8 +89,8 @@ class Game {
   }
 
   get nextDistrict() {
-    return DISTRICTS.find(district => !this.harbor.relics.has(district.relic.id))
-      ?? DISTRICTS[this.expedition.number % DISTRICTS.length];
+    const next = this.harbor.next;
+    return next ? DISTRICTS[next.district] : DISTRICTS[this.expedition.number % DISTRICTS.length];
   }
 
   get returnTime() {
@@ -160,7 +152,7 @@ class Game {
     trip.house = null;
     trip.opening = null;
     trip.hasKey = false;
-    this.notify(`${relic.name} yükte. İskeleye ulaştır!`, 4);
+    this.notify(relic.id === 'cog' ? 'Sema serbest! Çarkı al ve onu limana götür.' : `${relic.name} yükte. İskeleye ulaştır!`, 4);
   }
 
   onPhaseChange(index) {
@@ -217,7 +209,7 @@ class Game {
       return this.expedition.key ? 'Sokaklarda hurda ve mavi parlayan anahtarı ara.' : 'Buluntularını demir attığın tekneye götür.';
     }
     if (this.cargo.length) return 'Başlangıç İskelesi’nin ucunda E ile yükü teslim et.';
-    return this.tide.exposed ? 'Batık Mahalle kıyısında E ile demir at.' : 'Batık Mahalle’nin kıyısına ilerle. Sokaklar düşük suda açılır.';
+    return this.tide.exposed ? 'Mahalle kıyısında E ile demir at.' : `Sıradaki rota ${this.nextDistrict.name}. Sokaklar düşük suda açılır.`;
   }
 
   interact() {
@@ -248,18 +240,14 @@ class Game {
 
   deliver() {
     this.boat.stop();
-    const before = this.harbor.level;
-    const capacity = this.harbor.capacity;
-    const delivered = this.cargo.filter(item => !item.id).length;
-    for (const item of this.cargo) if (item.id) this.harbor.relics.add(item.id);
-    this.harbor.delivered += delivered;
     const total = this.cargo.length;
+    const valuables = this.cargo.some(item => item.id);
+    const lastUnlock = this.harbor.accept(this.cargo).at(-1);
     this.cargo = [];
-    const additions = this.harbor.built.slice(before - 1).map(upgrade => upgrade.name);
-    let message = `${total} parça teslim edildi.`;
-    if (additions.length) message += ` Limana eklendi: ${additions.join(', ')}.`;
-    if (capacity !== this.harbor.capacity) message += ` Tekne kapasitesi ${this.harbor.capacity} oldu.`;
-    this.notify(message, 6);
+    this.boat.speed = this.harbor.boatSpeed;
+    this.onDelivery(this.harbor);
+    if (lastUnlock) this.notify(`Liman gelişti. ${lastUnlock.reward}.`, 7);
+    else this.notify(valuables ? 'Buluntu teslim edildi. Günlüğe yeni bir sayfa eklendi.' : `${total} hurda teslim edildi.`, 5);
   }
 
   notify(message, duration = 4) {

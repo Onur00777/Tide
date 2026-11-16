@@ -28,7 +28,8 @@ class Keyboard {
 class Hud {
   constructor() {
     const ids = ['phase', 'timer', 'next-phase', 'tide-meter', 'tide-fill', 'tide-needle', 'notice', 'mode',
-      'objective', 'action', 'action-label', 'cargo', 'bank', 'level', 'upgrade', 'district', 'pause', 'pause-layer'];
+      'objective', 'action', 'action-label', 'cargo', 'bank', 'level', 'district', 'pause', 'pause-layer',
+      'return-time', 'mission-title', 'mission-needs', 'mission-reward', 'journal-open', 'journal-dialog', 'journal-entries'];
     this.ui = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
   }
 
@@ -61,27 +62,70 @@ class Hud {
     this.setText('notice', visibleNotice ? notice.message : '');
     this.setText('mode', game.mode === 'boat' ? 'TEKNEDE' : 'YAYA');
     this.setText('objective', game.objective);
+    this.ui['return-time'].hidden = !onFoot;
+    if (onFoot) this.setText('return-time', `TEKNE ~${game.returnTime} SN`);
     this.setText('cargo', `${game.cargo.length} / ${harbor.capacity}`);
     this.setText('bank', String(harbor.delivered));
     this.setText('level', `Seviye ${harbor.level}`);
-    this.setText('upgrade', harbor.next ? `${harbor.next.name} için ${harbor.next.total - harbor.delivered} parça` : 'Tüm yapılar tamamlandı');
+    this.drawMission(harbor);
     this.setText('pause', paused ? 'Devam et' : 'Duraklat');
     this.ui.pause.setAttribute('aria-pressed', String(paused));
     this.ui['pause-layer'].hidden = !paused;
   }
+
+  drawMission(harbor) {
+    const goal = harbor.next;
+    const needs = [];
+    if (harbor.scrapNeeded) needs.push(`${harbor.scrapNeeded} hurda`);
+    if (goal?.relic && !harbor.relics.has(goal.relic.id)) needs.push(goal.relic.name);
+    this.setText('mission-title', goal?.title ?? 'Liman Yeniden Yaşıyor');
+    this.setText('mission-needs', needs.join(' + '));
+    this.setText('mission-reward', goal ? `Ödül · ${goal.reward}` : 'Üç mahalleye de yeniden sefer yapabilirsin.');
+  }
+
+  drawJournal(harbor) {
+    const entries = JOURNAL_ENTRIES.map(entry => {
+      const found = harbor.relics.has(entry.relic.id);
+      const article = document.createElement('article');
+      const label = document.createElement('span');
+      const title = document.createElement('h3');
+      const body = document.createElement('p');
+      label.className = 'eyebrow';
+      label.textContent = found ? 'TESLİM EDİLDİ' : 'ARANIYOR';
+      title.textContent = found ? entry.title : entry.relic.name;
+      body.textContent = found ? entry.text : entry.hint;
+      article.append(label, title, body);
+      return article;
+    });
+    this.ui['journal-entries'].replaceChildren(...entries);
+  }
 }
 
-const game = new Game();
+const game = new Game(ProgressSave.load(), harbor => ProgressSave.write(harbor));
 const renderer = new Renderer(document.getElementById('sea'), game.world);
 const hud = new Hud();
 
 function togglePause() {
+  if (hud.ui['journal-dialog'].open) return;
   game.paused = !game.paused;
   keyboard.clear();
 }
 
 const keyboard = new Keyboard(() => game.interact(), togglePause);
 hud.ui.pause.addEventListener('click', togglePause);
+const journal = hud.ui['journal-dialog'];
+let pausedBeforeJournal = false;
+hud.ui['journal-open'].addEventListener('click', () => {
+  pausedBeforeJournal = game.paused;
+  game.paused = true;
+  keyboard.clear();
+  hud.drawJournal(game.harbor);
+  journal.showModal();
+});
+journal.addEventListener('close', () => {
+  game.paused = pausedBeforeJournal;
+  keyboard.clear();
+});
 
 let previousFrame;
 function frame(now) {
