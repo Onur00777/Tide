@@ -3,13 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#08171d">
+  <meta name="theme-color" content="#0a131e">
   <title>Gelgit — Kıyı Keşfi</title>
   <link rel="stylesheet" href="style.css">
   <script defer src="world.js"></script>
   <script defer src="expedition.js"></script>
   <script defer src="progression.js"></script>
   <script defer src="game.js"></script>
+  <script defer src="feedback.js"></script>
   <script defer src="render.js"></script>
   <script defer src="main.js"></script>
 </head>
@@ -19,12 +20,13 @@
       <div class="brand"><span class="sigil" aria-hidden="true">≈</span><h1>Gelgit</h1></div>
       <span class="edition">KIYI KEŞFİ <i></i> v0.2</span>
       <div class="header-actions">
+        <button type="button" id="sound" aria-label="Oyun sesleri" aria-pressed="true">Ses açık</button>
         <button type="button" id="journal-open" aria-haspopup="dialog">Günlük</button>
         <button type="button" id="pause" aria-pressed="false">Duraklat</button>
       </div>
     </header>
 
-    <section class="tide" aria-label="Gelgit döngüsü">
+    <section class="tide" id="tide" aria-label="Gelgit döngüsü">
       <div class="tide-phase"><span class="eyebrow">GELGİT</span><strong id="phase">Yüksek su</strong></div>
       <div class="tide-chart">
         <div id="tide-meter" class="track" role="progressbar" aria-label="Gelgit döngüsü" aria-valuemin="0" aria-valuemax="50" aria-valuenow="0">
@@ -35,7 +37,7 @@
       <div class="tide-clock"><strong id="timer">0:13</strong><span class="eyebrow" id="next-phase">ÇEKİLMEYE</span></div>
     </section>
 
-    <section class="viewport" aria-label="Gelgit oyun alanı">
+    <section class="viewport" id="viewport" aria-label="Gelgit oyun alanı">
       <canvas id="sea" width="1100" height="620" aria-label="Başlangıç iskelesi ve Batık Mahalle haritası">Bu oyun Canvas destekli bir tarayıcı gerektirir.</canvas>
       <div class="chart-label harbor-label"><small>01 / LİMAN</small><span>Başlangıç İskelesi</span></div>
       <div class="chart-label district-label"><small>BATIK BÖLGE</small><span id="district">Fener Sokağı</span></div>

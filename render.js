@@ -220,6 +220,8 @@ class Renderer {
     if (water > 0.01) {
       ctx.save();
       ctx.clip(district.land);
+      ctx.fillStyle = `rgba(54, 122, 145, ${water * 0.2})`;
+      ctx.fillRect(0, 0, VIEW.width, VIEW.height);
       this.waves(game.time, water);
       ctx.restore();
     }
@@ -241,8 +243,13 @@ class Renderer {
       for (const piece of game.expedition.loot) this.debris(piece, game.time);
       this.drawExpedition(game.expedition, game.time);
     }
-    this.drawBoat(game.boat, game.time, game.mode === 'foot', night, waterMask);
-    if (game.mode === 'foot') this.drawWalker(game.walker);
+    const anchored = game.mode === 'foot';
+    const hasSema = game.cargo.includes(RELICS.cog);
+    this.drawBoat(game.boat, game.time, anchored, night, waterMask, anchored ? [] : game.cargo);
+    if (anchored) {
+      if (hasSema) this.drawEscort(game.walker);
+      this.drawWalker(game.walker);
+    }
   }
 
   drawExpedition(trip, time) {
@@ -450,7 +457,7 @@ class Renderer {
     ctx.restore();
   }
 
-  drawBoat(boat, time, anchored, night, waterMask) {
+  drawBoat(boat, time, anchored, night, waterMask, cargo) {
     const ctx = this.ctx;
     const speed = boat.currentSpeed / boat.speed;
     const roll = Math.sin(time * 2.8 + boat.x * 0.014 + boat.y * 0.023);
@@ -495,6 +502,16 @@ class Renderer {
     ctx.fillStyle = '#d7ab79';
     ctx.fillRect(-9, -5.25, 3, 10.5);
     ctx.fillRect(-1.5, -4.75, 3, 9.5);
+    for (const [index, item] of cargo.entries()) {
+      const x = -9.5 + Math.floor(index / 2) * 4.4;
+      const y = index % 2 ? 0.65 : -4.25;
+      ctx.fillStyle = '#36251d';
+      ctx.fillRect(x, y, 4.1, 4.2);
+      ctx.fillStyle = item.color ?? '#c59360';
+      ctx.fillRect(x + 0.4, y, 3.1, 3.2);
+      ctx.fillStyle = '#8d563c';
+      ctx.fillRect(x + 1.45, y + 0.05, 0.7, 3.1);
+    }
     ctx.restore();
     ctx.strokeStyle = '#e4c69b';
     ctx.lineWidth = 1.55;
@@ -505,6 +522,10 @@ class Renderer {
     ctx.fillRect(-14, -2.4, 0.9, 3.7);
     this.disc(7, 0, 2.7, '#5c4033');
     this.disc(7, 0, 1.4 + night * 0.45, '#fff0bc');
+    if (cargo.includes(RELICS.cog)) {
+      this.disc(-3, -4.5, 2.6, '#487d80');
+      this.disc(-2.6, -4.7, 1.35, '#efd2b0');
+    }
     ctx.restore();
   }
 
@@ -551,6 +572,15 @@ class Renderer {
     this.disc(0, 0, 5.5, '#ce7957');
     this.disc(2, 0, 3.4, '#ffdfa6');
     ctx.restore();
+  }
+
+  drawEscort(walker) {
+    const x = walker.x - Math.cos(walker.heading) * 13;
+    const y = walker.y - Math.sin(walker.heading) * 13;
+    if (!this.world.canOccupy(x, y, 4, 'foot', true)) return;
+    this.disc(x, y, 5.5, '#263943');
+    this.disc(x, y, 4.3, '#6ba0a2');
+    this.disc(x + 1, y - 1, 2.5, '#efd2b0');
   }
 
   ring(x, y, radius, color, time) {

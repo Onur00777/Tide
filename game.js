@@ -84,6 +84,7 @@ class Game {
     this.mode = 'boat';
     this.cargo = [];
     this.notice = null;
+    this.cues = [];
     this.time = 0;
     this.paused = false;
   }
@@ -128,11 +129,16 @@ class Game {
     if (trip.key && distance(trip.key, this.walker) < 15) {
       trip.key = null;
       trip.hasKey = true;
+      this.signal('key', this.walker);
       this.notify(`Anahtar bulundu. ${trip.district.house} açılabilir.`);
     }
     if (this.cargo.length >= this.harbor.capacity) return;
     const index = trip.loot.findIndex(piece => distance(piece, this.walker) < 15);
-    if (index >= 0) this.cargo.push(trip.loot.splice(index, 1)[0]);
+    if (index >= 0) {
+      const [piece] = trip.loot.splice(index, 1);
+      this.cargo.push(piece);
+      this.signal('scrap', piece);
+    }
   }
 
   recoverRelic() {
@@ -152,6 +158,7 @@ class Game {
     trip.house = null;
     trip.opening = null;
     trip.hasKey = false;
+    this.signal('relic', this.walker);
     this.notify(relic.id === 'cog' ? 'Sema serbest! Çarkı al ve onu limana götür.' : `${relic.name} yükte. İskeleye ulaştır!`, 4);
   }
 
@@ -174,6 +181,7 @@ class Game {
         const lost = this.cargo.length;
         this.cargo = [];
         this.board();
+        this.signal('flood', this.boat);
         this.notify(lost ? `Suya kapıldın. Tekneye döndün, ${lost} parçayı kaybettin.` : 'Suya kapıldın. Tekneye döndün.', 6);
       } else {
         this.notify('Mahalle yeniden su altında.');
@@ -245,10 +253,13 @@ class Game {
     const lastUnlock = this.harbor.accept(this.cargo).at(-1);
     this.cargo = [];
     this.boat.speed = this.harbor.boatSpeed;
+    this.signal(lastUnlock ? 'upgrade' : 'delivery', lastUnlock || this.world.dock);
     this.onDelivery(this.harbor);
     if (lastUnlock) this.notify(`Liman gelişti. ${lastUnlock.reward}.`, 7);
     else this.notify(valuables ? 'Buluntu teslim edildi. Günlüğe yeni bir sayfa eklendi.' : `${total} hurda teslim edildi.`, 5);
   }
+
+  signal(type, { x, y }) { this.cues.push({ type, x, y }); }
 
   notify(message, duration = 4) {
     this.notice = { message, until: this.time + duration };

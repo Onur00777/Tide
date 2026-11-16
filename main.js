@@ -29,7 +29,8 @@ class Hud {
   constructor() {
     const ids = ['phase', 'timer', 'next-phase', 'tide-meter', 'tide-fill', 'tide-needle', 'notice', 'mode',
       'objective', 'action', 'action-label', 'cargo', 'bank', 'level', 'district', 'pause', 'pause-layer',
-      'return-time', 'mission-title', 'mission-needs', 'mission-reward', 'journal-open', 'journal-dialog', 'journal-entries'];
+      'return-time', 'mission-title', 'mission-needs', 'mission-reward', 'journal-open', 'journal-dialog', 'journal-entries',
+      'tide', 'viewport', 'sound'];
     this.ui = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
   }
 
@@ -41,9 +42,14 @@ class Hud {
   draw(game) {
     const { tide, harbor, notice, paused } = game;
     const onFoot = game.mode === 'foot';
+    const threat = game.threat;
+    if (this.ui.tide.dataset.threat !== threat) {
+      this.ui.tide.dataset.threat = threat;
+      this.ui.viewport.dataset.threat = threat;
+    }
     const seconds = Math.ceil(onFoot ? tide.untilFlood : tide.remaining);
     const phase = tide.phase;
-    this.setText('phase', phase.name);
+    this.setText('phase', threat === 'critical' ? 'Dönüş zamanı' : phase.name);
     this.setText('timer', `0:${String(seconds).padStart(2, '0')}`);
     this.setText('next-phase', onFoot ? 'TAŞKINA' : phase.next);
     this.setText('district', game.expedition.district.name);
@@ -104,6 +110,16 @@ class Hud {
 const game = new Game(ProgressSave.load(), harbor => ProgressSave.write(harbor));
 const renderer = new Renderer(document.getElementById('sea'), game.world);
 const hud = new Hud();
+const feedback = new Feedback();
+
+window.addEventListener('keydown', () => feedback.audio.unlock());
+window.addEventListener('pointerdown', () => feedback.audio.unlock());
+hud.ui.sound.addEventListener('click', () => {
+  feedback.audio.toggle();
+  const enabled = feedback.audio.enabled;
+  hud.setText('sound', enabled ? 'Ses açık' : 'Ses kapalı');
+  hud.ui.sound.setAttribute('aria-pressed', String(enabled));
+});
 
 function togglePause() {
   if (hud.ui['journal-dialog'].open) return;
@@ -132,7 +148,9 @@ function frame(now) {
   const seconds = previousFrame === undefined ? 0 : Math.min((now - previousFrame) / 1000, 1 / 30);
   previousFrame = now;
   game.update(seconds, keyboard.dx, keyboard.dy);
+  feedback.update(game);
   renderer.draw(game);
+  feedback.draw(renderer.ctx, game.time);
   hud.draw(game);
   requestAnimationFrame(frame);
 }
