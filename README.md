@@ -9,6 +9,7 @@ Bu klasördeki `index.html` dosyasını tarayıcıda aç. Kurulum veya yerel sun
 ## Kontroller
 
 - **WASD** veya **ok tuşları** ile tekneyi ve karakteri hareket ettir.
+- Tekne kademeli hızlanır. Yön tuşunu bıraktığında yavaşlayarak durur. Kıyıya yaklaşırken süzülme payı bırakabilirsin.
 - **E** ile mahalle kıyısında karaya çık, tekneye geri bin veya iskelede yükünü teslim et.
 - Parlayan enkaz parçalarının üzerinden geçerek onları topla.
 - **Esc** ile oyunu duraklat veya sürdür.
