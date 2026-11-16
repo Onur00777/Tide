@@ -76,6 +76,9 @@ kbd { display: inline-block; padding: 3px 5px; border: 1px solid #496268; border
 .journal article { border-top: 1px solid #46515a; padding: 12px 0; }
 .journal h3 { margin: 5px 0 0; color: #f5d5a2; font: 20px/1.2 Georgia, serif; }
 .journal p { margin: 6px 0 0; color: #cdd9df; font-size: 14px; line-height: 1.5; }
+@media (min-width: 950px) and (max-height: 930px) {
+  .shell { width: min(1144px, 100% - 40px, max(800px, calc((100dvh - 255px) * 1.7742))); }
+}
 @media (max-width: 620px) {
   .shell { width: calc(100% - 18px); padding-top: 12px; }
   .masthead { gap: 10px; }
