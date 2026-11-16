@@ -7,6 +7,7 @@
   <title>Gelgit — Kıyı Keşfi</title>
   <link rel="stylesheet" href="style.css">
   <script defer src="world.js"></script>
+  <script defer src="expedition.js"></script>
   <script defer src="game.js"></script>
   <script defer src="render.js"></script>
   <script defer src="main.js"></script>
@@ -22,18 +23,18 @@
     <section class="tide" aria-label="Gelgit döngüsü">
       <div class="tide-phase"><span class="eyebrow">GELGİT</span><strong id="phase">Yüksek su</strong></div>
       <div class="tide-chart">
-        <div id="tide-meter" class="track" role="progressbar" aria-label="Gelgit döngüsü" aria-valuemin="0" aria-valuemax="90" aria-valuenow="0">
+        <div id="tide-meter" class="track" role="progressbar" aria-label="Gelgit döngüsü" aria-valuemin="0" aria-valuemax="50" aria-valuenow="0">
           <span class="track-fill" id="tide-fill"></span><span class="needle" id="tide-needle"></span>
         </div>
         <div class="ticks" aria-hidden="true"><span>Yüksek</span><span>Çekilme</span><span>Düşük</span><span>Yükselme</span></div>
       </div>
-      <div class="tide-clock"><strong id="timer">0:24</strong><span class="eyebrow" id="next-phase">ÇEKİLMEYE</span></div>
+      <div class="tide-clock"><strong id="timer">0:13</strong><span class="eyebrow" id="next-phase">ÇEKİLMEYE</span></div>
     </section>
 
     <section class="viewport" aria-label="Gelgit oyun alanı">
       <canvas id="sea" width="1100" height="620" aria-label="Başlangıç iskelesi ve Batık Mahalle haritası">Bu oyun Canvas destekli bir tarayıcı gerektirir.</canvas>
       <div class="chart-label harbor-label"><small>01 / LİMAN</small><span>Başlangıç İskelesi</span></div>
-      <div class="chart-label district-label"><small>02 / BATIK BÖLGE</small><span>Batık Mahalle</span></div>
+      <div class="chart-label district-label"><small>BATIK BÖLGE</small><span id="district">Fener Sokağı</span></div>
       <div class="compass" aria-hidden="true"><span>K</span><b>◆</b></div>
       <div id="notice" class="notice" role="status" hidden></div>
       <div class="field-info"><span id="mode" class="mode">TEKNEDE</span><span id="objective">Batık Mahalle’nin kıyısına ilerle.</span></div>

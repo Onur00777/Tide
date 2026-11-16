@@ -29,7 +29,7 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .tide-phase strong { font-size: 16px; }
 .tide-clock { text-align: right; }
 .tide-clock strong { color: var(--accent); font: 700 21px/1 ui-monospace, Consolas, monospace; }
-.track { position: relative; height: 9px; border-radius: 3px; background: linear-gradient(to right, #306976 0 26.667%, #527c77 26.667% 34.444%, #67563f 34.444% 90%, #76504e 90%); }
+.track { position: relative; height: 9px; border-radius: 3px; background: linear-gradient(to right, #306976 0 26%, #527c77 26% 36%, #67563f 36% 84%, #76504e 84%); }
 .track-fill { position: absolute; inset: 0 auto 0 0; width: 0; background: #ffe4ad44; border-radius: inherit; }
 .needle { position: absolute; top: -3px; left: 0; width: 3px; height: 15px; background: #ffe3ad; border-radius: 3px; transform: translateX(-50%); box-shadow: 0 0 9px #ffc371b0; }
 .ticks { display: flex; justify-content: space-between; color: var(--muted); font-size: 10px; margin-top: 5px; }

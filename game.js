@@ -70,7 +70,10 @@ class Boat extends Actor {
 }
 
 class HarborProgress {
-  constructor() { this.delivered = 0; }
+  constructor() {
+    this.delivered = 0;
+    this.relics = new Set();
+  }
 
   get built() { return UPGRADES.filter(upgrade => this.delivered >= upgrade.total); }
   get next() { return UPGRADES.find(upgrade => this.delivered < upgrade.total); }
@@ -82,15 +85,32 @@ class Game {
   constructor() {
     this.world = new World();
     this.tide = new Tide();
+    this.expedition = new Expedition(this.world);
     this.harbor = new HarborProgress();
     this.boat = new Boat(411, 348);
-    this.walker = new Actor(0, 0, 6, 124);
+    this.walker = new Actor(0, 0, 6, 106);
     this.mode = 'boat';
-    this.cargo = 0;
-    this.loot = [];
+    this.cargo = [];
     this.notice = null;
     this.time = 0;
     this.paused = false;
+  }
+
+  get nextDistrict() {
+    return DISTRICTS.find(district => !this.harbor.relics.has(district.relic.id))
+      ?? DISTRICTS[this.expedition.number % DISTRICTS.length];
+  }
+
+  get returnTime() {
+    if (this.mode !== 'foot') return 0;
+    const remaining = this.returnDistance(this.walker);
+    return Math.ceil(remaining / (this.walker.speed * 0.72)) + 1;
+  }
+
+  get threat() {
+    if (this.mode !== 'foot') return 'safe';
+    if (this.tide.index === 3 || this.tide.untilFlood <= this.returnTime + 1) return 'critical';
+    return this.tide.untilFlood <= this.returnTime + 5 ? 'warning' : 'safe';
   }
 
   update(seconds, dx, dy) {
@@ -99,37 +119,68 @@ class Game {
     this.tide.advance(seconds, index => this.onPhaseChange(index));
 
     const actor = this.mode === 'boat' ? this.boat : this.walker;
-    actor.move(dx, dy, seconds, (x, y) => this.world.canOccupy(x, y, actor.radius, this.mode, this.tide.exposed));
+    const movementTime = this.mode === 'foot' ? seconds * (1 - this.tide.water * 0.28) : seconds;
+    actor.move(dx, dy, movementTime, (x, y) => this.world.canOccupy(x, y, actor.radius, this.mode, this.tide.exposed));
+    if (this.mode === 'foot') this.explore(seconds, dx || dy);
+  }
 
-    if (this.mode === 'foot' && this.cargo < this.harbor.capacity) {
-      const piece = this.loot.findIndex(loot => distance(loot, this.walker) < 15);
-      if (piece >= 0) {
-        this.loot.splice(piece, 1);
-        this.cargo++;
-        if (this.cargo === this.harbor.capacity && this.tide.index !== 3) {
-          this.notify('Tekne doldu. İskeleye dönüp yükü teslim et.');
-        }
+  explore(seconds, moving) {
+    const trip = this.expedition;
+    if (trip.opening) {
+      if (moving) trip.opening = null;
+      else {
+        trip.opening.elapsed += seconds;
+        if (trip.opening.elapsed >= trip.opening.duration) this.recoverRelic();
       }
     }
+    if (trip.key && distance(trip.key, this.walker) < 15) {
+      trip.key = null;
+      trip.hasKey = true;
+      this.notify(`Anahtar bulundu. ${trip.district.house} açılabilir.`);
+    }
+    if (this.cargo.length >= this.harbor.capacity) return;
+    const index = trip.loot.findIndex(piece => distance(piece, this.walker) < 15);
+    if (index >= 0) this.cargo.push(trip.loot.splice(index, 1)[0]);
+  }
+
+  recoverRelic() {
+    const trip = this.expedition;
+    const relic = trip.district.relic;
+    if (this.cargo.length === this.harbor.capacity) {
+      const scrap = this.cargo.findIndex(item => !item.id);
+      if (scrap === -1) {
+        trip.opening = null;
+        this.notify('Yük dolu. Önce limana dön.');
+        return;
+      }
+      const [dropped] = this.cargo.splice(scrap, 1);
+      trip.loot.push({ ...dropped, x: this.walker.x, y: this.walker.y });
+    }
+    this.cargo.push(relic);
+    trip.house = null;
+    trip.opening = null;
+    trip.hasKey = false;
+    this.notify(`${relic.name} yükte. İskeleye ulaştır!`, 4);
   }
 
   onPhaseChange(index) {
-    if (index === 1) this.notify('Su çekiliyor. Kıyı açıldığında tekneden inebilirsin.');
+    if (index === 1) this.notify(`Su çekiliyor. Sıradaki rota ${this.nextDistrict.name}.`);
     if (index === 2) {
+      const district = this.nextDistrict;
+      this.expedition.begin(district, this.harbor.relics.has(district.relic.id) || this.cargo.includes(district.relic));
       const grounded = !this.world.canOccupy(this.boat.x, this.boat.y, this.boat.radius, 'boat', true);
       if (grounded) {
         Object.assign(this.boat, this.world.nearestWater(this.boat));
         this.boat.stop();
       }
-      this.loot = this.world.spawnLoot();
-      this.notify(grounded ? 'Mahalle açıldı. Teknen kıyıdaki derin suya alındı.' : 'Mahalle açıldı. Kıyıda E ile tekneden in.');
+      this.notify(grounded ? 'Mahalle açıldı. Teknen kıyıdaki derin suya alındı.' : `${district.name} açıldı. Kıyıda E ile tekneden in.`);
     }
-    if (index === 3) this.notify(this.mode === 'foot' ? 'Su yükseliyor! Hemen tekneye dön.' : 'Su yükseliyor.', 9);
+    if (index === 3) this.notify(this.mode === 'foot' ? 'Su yükseliyor! Hemen tekneye dön.' : 'Su yükseliyor.', 8);
     if (index === 0) {
-      this.loot = [];
+      this.expedition.end();
       if (this.mode === 'foot') {
-        const lost = this.cargo;
-        this.cargo = 0;
+        const lost = this.cargo.length;
+        this.cargo = [];
         this.board();
         this.notify(lost ? `Suya kapıldın. Tekneye döndün, ${lost} parçayı kaybettin.` : 'Suya kapıldın. Tekneye döndün.', 6);
       } else {
@@ -140,11 +191,18 @@ class Game {
 
   get interaction() {
     if (this.mode === 'foot') {
+      const trip = this.expedition;
+      if (trip.opening) return null;
+      if (trip.house && distance(trip.house, this.walker) < 33) {
+        if (!trip.hasKey) return { type: 'locked', label: 'Kilitli evi incele' };
+        const label = this.cargo.length === this.harbor.capacity ? 'Hurda bırakıp kilidi aç' : 'Kilitli evi aç';
+        return { type: 'unlock', label };
+      }
       const nearBoat = distance(this.walker, this.boat) < 48 && this.world.hasClearLanding(this.boat, this.walker);
       return nearBoat ? { type: 'board', label: 'Tekneye bin' } : null;
     }
-    if (distance(this.boat, this.world.dock) < 46 && this.cargo > 0) {
-      return { type: 'deliver', label: `${this.cargo} parça teslim et` };
+    if (distance(this.boat, this.world.dock) < 46 && this.cargo.length) {
+      return { type: 'deliver', label: `${this.cargo.length} parça teslim et` };
     }
     const landing = this.tide.exposed && this.world.landingNear(this.boat);
     return landing ? { type: 'land', label: 'Demir at ve in', landing } : null;
@@ -152,11 +210,13 @@ class Game {
 
   get objective() {
     if (this.mode === 'foot') {
-      if (this.tide.index === 3) return 'Su yükseliyor. Tekneye hemen dön!';
-      if (this.cargo >= this.harbor.capacity) return 'Yük doldu. Demir attığın tekneye dön.';
-      return 'Sokaklardaki parlayan enkaz parçalarının üzerinden geç.';
+      if (this.threat === 'critical') return 'Dönüş riskli. Hemen tekneye dön!';
+      if (this.expedition.opening) return 'Kilit açılıyor. Harekete geçersen işlem kesilir.';
+      if (this.expedition.hasKey) return `${this.expedition.district.house} için kehribar işaretini izle.`;
+      if (this.cargo.length >= this.harbor.capacity) return 'Yük doldu. Limana dön veya nadir buluntu için hurda bırak.';
+      return this.expedition.key ? 'Sokaklarda hurda ve mavi parlayan anahtarı ara.' : 'Buluntularını demir attığın tekneye götür.';
     }
-    if (this.cargo > 0) return 'Başlangıç İskelesi’nin ucuna dön ve E ile yükü teslim et.';
+    if (this.cargo.length) return 'Başlangıç İskelesi’nin ucunda E ile yükü teslim et.';
     return this.tide.exposed ? 'Batık Mahalle kıyısında E ile demir at.' : 'Batık Mahalle’nin kıyısına ilerle. Sokaklar düşük suda açılır.';
   }
 
@@ -173,24 +233,30 @@ class Game {
       this.walker.moving = false;
       this.boat.stop();
       this.mode = 'foot';
+      this.returnDistance = this.world.returnDistances(action.landing);
     }
+    if (action.type === 'locked') this.notify('Kilitli. Mavi parlayan anahtarı sokaklarda ara.');
+    if (action.type === 'unlock') this.expedition.opening = { elapsed: 0, duration: 2.6 };
     if (action.type === 'deliver') this.deliver();
   }
 
   board() {
     this.mode = 'boat';
     this.walker.moving = false;
+    this.expedition.opening = null;
   }
 
   deliver() {
     this.boat.stop();
     const before = this.harbor.level;
     const capacity = this.harbor.capacity;
-    const delivered = this.cargo;
+    const delivered = this.cargo.filter(item => !item.id).length;
+    for (const item of this.cargo) if (item.id) this.harbor.relics.add(item.id);
     this.harbor.delivered += delivered;
-    this.cargo = 0;
+    const total = this.cargo.length;
+    this.cargo = [];
     const additions = this.harbor.built.slice(before - 1).map(upgrade => upgrade.name);
-    let message = `${delivered} parça teslim edildi.`;
+    let message = `${total} parça teslim edildi.`;
     if (additions.length) message += ` Limana eklendi: ${additions.join(', ')}.`;
     if (capacity !== this.harbor.capacity) message += ` Tekne kapasitesi ${this.harbor.capacity} oldu.`;
     this.notify(message, 6);

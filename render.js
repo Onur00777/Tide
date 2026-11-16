@@ -34,17 +34,26 @@ class Renderer {
       length: 8 + random() * 27, offset: random() * Math.PI * 2,
     })));
     this.harbor = this.paintPatch(world.harbor, false);
-    this.district = this.paintPatch(world.district, true);
+    this.districtLayers = new Map();
     this.openWater = new Path2D();
     this.openWater.rect(0, 0, VIEW.width, VIEW.height);
     this.openWater.addPath(this.harbor.land);
-    this.lowWater = new Path2D(this.openWater);
-    this.lowWater.addPath(this.district.land);
     const ctx = this.ctx;
     this.sea = this.paintSea();
     this.vignette = ctx.createRadialGradient(550, 286, 125, 550, 286, 635);
     this.vignette.addColorStop(0, '#04142100');
     this.vignette.addColorStop(1, '#041421a8');
+  }
+
+  districtLayer() {
+    const patch = this.world.district;
+    const existing = this.districtLayers.get(patch.rows);
+    if (existing) return existing;
+    const layer = this.paintPatch(patch, true);
+    layer.waterMask = new Path2D(this.openWater);
+    layer.waterMask.addPath(layer.land);
+    this.districtLayers.set(patch.rows, layer);
+    return layer;
   }
 
   paintSea() {
@@ -153,7 +162,7 @@ class Renderer {
           }
         }
       }
-      if (tile.type === TERRAIN.rubble) this.ruin(ctx, x, y, roll);
+      if (tile.type === TERRAIN.rubble || tile.type === TERRAIN.door) this.ruin(ctx, x, y, roll);
     }
     ctx.strokeStyle = district ? '#d1ba8b4f' : '#cbb88d87';
     ctx.lineWidth = 10;
@@ -199,20 +208,22 @@ class Renderer {
 
   draw(game) {
     const ctx = this.ctx;
+    const district = this.districtLayer();
     const water = game.tide.water;
     const night = 1 - water;
+    const waterMask = game.tide.exposed ? district.waterMask : this.openWater;
     ctx.drawImage(this.sea, 0, 0, VIEW.width, VIEW.height);
     this.waves(game.time, 1);
     ctx.globalAlpha = 1 - water * 0.68;
-    ctx.drawImage(this.district.canvas, 0, 0);
+    ctx.drawImage(district.canvas, 0, 0);
     ctx.globalAlpha = 1;
     if (water > 0.01) {
       ctx.save();
-      ctx.clip(this.district.land);
+      ctx.clip(district.land);
       this.waves(game.time, water);
       ctx.restore();
     }
-    this.surf(this.district.coast, game.time, 1 - water * 0.9);
+    this.surf(district.coast, game.time, 1 - water * 0.9);
     ctx.drawImage(this.harbor.canvas, 0, 0);
     this.surf(this.harbor.coast, game.time, 1);
     this.harborDetails(game.harbor);
@@ -222,16 +233,50 @@ class Renderer {
     ctx.fillStyle = this.vignette;
     ctx.fillRect(0, 0, VIEW.width, VIEW.height);
 
-    this.lights(game, night);
+    this.lights(game, night, waterMask);
     this.dockMarker(game.time);
     if (game.tide.exposed) {
       const action = game.interaction;
       if (action?.type === 'land') this.ring(action.landing.x, action.landing.y, 12, '#ffe1a6', game.time);
-      for (const piece of game.loot) this.debris(piece, game.time);
+      for (const piece of game.expedition.loot) this.debris(piece, game.time);
+      this.drawExpedition(game.expedition, game.time);
     }
-    const waterMask = game.tide.exposed ? this.lowWater : this.openWater;
     this.drawBoat(game.boat, game.time, game.mode === 'foot', night, waterMask);
     if (game.mode === 'foot') this.drawWalker(game.walker);
+  }
+
+  drawExpedition(trip, time) {
+    const ctx = this.ctx;
+    if (trip.key) {
+      const { x, y } = trip.key;
+      this.glow(x, y, 17, 0.28);
+      ctx.strokeStyle = '#9debe8';
+      ctx.lineWidth = 1.7;
+      ctx.beginPath();
+      ctx.arc(x - 3, y - 2, 3, 0, Math.PI * 2);
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + 6, y + 5);
+      ctx.lineTo(x + 7, y + 2);
+      ctx.stroke();
+    }
+    if (trip.house) {
+      const { x, y } = trip.house;
+      this.ring(x, y, 14, trip.hasKey ? '#ffcd81' : '#aa8f75', time);
+      ctx.strokeStyle = '#ffe1a0';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(x, y - 2, 3, Math.PI, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = '#e3a462';
+      ctx.fillRect(x - 4, y - 2, 8, 6);
+      if (trip.opening) {
+        ctx.strokeStyle = '#fff6d6';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(x, y, 17, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * trip.opening.elapsed / trip.opening.duration);
+        ctx.stroke();
+      }
+    }
   }
 
   waves(time, opacity) {
@@ -338,11 +383,11 @@ class Renderer {
     }
   }
 
-  lights(game, night) {
+  lights(game, night, waterMask) {
     const ctx = this.ctx;
     const { x, y } = this.world.lighthouse;
     ctx.save();
-    ctx.clip(game.tide.exposed ? this.lowWater : this.openWater, 'evenodd');
+    ctx.clip(waterMask, 'evenodd');
     this.reflect(x, y, 97, night * 0.47, game.time);
     this.reflect(game.boat.x, game.boat.y, 36, 0.11 + night * 0.57, game.time);
     ctx.restore();

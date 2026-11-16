@@ -28,7 +28,7 @@ class Keyboard {
 class Hud {
   constructor() {
     const ids = ['phase', 'timer', 'next-phase', 'tide-meter', 'tide-fill', 'tide-needle', 'notice', 'mode',
-      'objective', 'action', 'action-label', 'cargo', 'bank', 'level', 'upgrade', 'pause', 'pause-layer'];
+      'objective', 'action', 'action-label', 'cargo', 'bank', 'level', 'upgrade', 'district', 'pause', 'pause-layer'];
     this.ui = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
   }
 
@@ -39,11 +39,13 @@ class Hud {
 
   draw(game) {
     const { tide, harbor, notice, paused } = game;
-    const seconds = Math.ceil(tide.remaining);
+    const onFoot = game.mode === 'foot';
+    const seconds = Math.ceil(onFoot ? tide.untilFlood : tide.remaining);
     const phase = tide.phase;
     this.setText('phase', phase.name);
     this.setText('timer', `0:${String(seconds).padStart(2, '0')}`);
-    this.setText('next-phase', phase.next);
+    this.setText('next-phase', onFoot ? 'TAŞKINA' : phase.next);
+    this.setText('district', game.expedition.district.name);
     const progress = `${tide.progress * 100}%`;
     this.ui['tide-fill'].style.width = progress;
     this.ui['tide-needle'].style.left = progress;
@@ -59,7 +61,7 @@ class Hud {
     this.setText('notice', visibleNotice ? notice.message : '');
     this.setText('mode', game.mode === 'boat' ? 'TEKNEDE' : 'YAYA');
     this.setText('objective', game.objective);
-    this.setText('cargo', `${game.cargo} / ${harbor.capacity}`);
+    this.setText('cargo', `${game.cargo.length} / ${harbor.capacity}`);
     this.setText('bank', String(harbor.delivered));
     this.setText('level', `Seviye ${harbor.level}`);
     this.setText('upgrade', harbor.next ? `${harbor.next.name} için ${harbor.next.total - harbor.delivered} parça` : 'Tüm yapılar tamamlandı');

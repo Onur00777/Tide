@@ -1,7 +1,7 @@
 'use strict';
 
 const VIEW = Object.freeze({ width: 1100, height: 620, tile: 28 });
-const TERRAIN = Object.freeze({ sea: ' ', harbor: 'H', pier: 'P', street: '.', rubble: '#', square: '+' });
+const TERRAIN = Object.freeze({ sea: ' ', harbor: 'H', pier: 'P', street: '.', rubble: '#', square: '+', door: 'D' });
 const DIRECTIONS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 
 const HARBOR_MAP = [
@@ -21,7 +21,7 @@ const DISTRICT_MAP = [
   '    ...#..##....',
   '   ..###..##.....',
   '  ............##..',
-  '  ...##..++++.##..',
+  '  ...##..++++.D#..',
   ' ...###..++++.....',
   ' .........++.......',
   ' ................##',
@@ -35,10 +35,10 @@ const DISTRICT_MAP = [
 ];
 
 const PHASES = [
-  { name: 'Yüksek su', next: 'ÇEKİLMEYE', seconds: 24, exposed: false },
-  { name: 'Su çekiliyor', next: 'DÜŞÜK SUYA', seconds: 7, exposed: false },
-  { name: 'Düşük su', next: 'YÜKSELMEYE', seconds: 50, exposed: true },
-  { name: 'Su yükseliyor', next: 'TAŞKINA', seconds: 9, exposed: true },
+  { name: 'Yüksek su', next: 'ÇEKİLMEYE', seconds: 13, exposed: false },
+  { name: 'Su çekiliyor', next: 'DÜŞÜK SUYA', seconds: 5, exposed: false },
+  { name: 'Düşük su', next: 'YÜKSELMEYE', seconds: 24, exposed: true },
+  { name: 'Su yükseliyor', next: 'TAŞKINA', seconds: 8, exposed: true },
 ];
 
 const UPGRADES = [
@@ -66,6 +66,7 @@ class Tide {
   get phase() { return PHASES[this.index]; }
   get remaining() { return this.phase.seconds - this.elapsed; }
   get exposed() { return this.phase.exposed; }
+  get untilFlood() { return this.exposed ? this.remaining + (this.index === 2 ? PHASES[3].seconds : 0) : 0; }
   get progress() {
     const passed = PHASES.slice(0, this.index).reduce((total, phase) => total + phase.seconds, 0);
     return (passed + this.elapsed) / this.duration;
@@ -106,9 +107,13 @@ class TilePatch {
 class World {
   constructor() {
     this.harbor = new TilePatch(64, 208, HARBOR_MAP);
-    this.district = new TilePatch(530, 100, DISTRICT_MAP);
     this.dock = { x: 390, y: 348 };
     this.lighthouse = { x: 127, y: 288 };
+    this.setDistrict(DISTRICT_MAP);
+  }
+
+  setDistrict(rows) {
+    this.district = new TilePatch(530, 100, rows);
     this.shore = this.district.tiles.filter(tile => this.isWalkable(tile.type)
       && DIRECTIONS.some(([dx, dy]) => this.district.at(tile.col + dx, tile.row + dy) === TERRAIN.sea));
   }
@@ -167,16 +172,25 @@ class World {
     return candidates.reduce((best, point) => distance(boat, point) < distance(boat, best) ? point : best, this.dock);
   }
 
-  spawnLoot() {
-    const tiles = this.district.tiles.filter(tile => this.isWalkable(tile.type));
-    const pieces = [];
-    // Sample without replacement, with several pieces near the western approach.
-    for (let index = 0; index < 22; index++) {
-      const eligible = index < 5 ? tiles.filter(tile => tile.col <= 5) : tiles;
-      const tile = eligible[Math.floor(Math.random() * eligible.length)];
-      tiles.splice(tiles.indexOf(tile), 1);
-      pieces.push({ x: tile.x, y: tile.y, kind: index % 3 });
+  returnDistances(landing) {
+    const tileKey = (col, row) => row * 32 + col;
+    const queue = [{ ...landing, steps: 0 }];
+    const distances = new Map([[tileKey(landing.col, landing.row), 0]]);
+    for (const { col, row, steps } of queue) {
+      for (const [dx, dy] of DIRECTIONS) {
+        const nextCol = col + dx;
+        const nextRow = row + dy;
+        if (!this.isWalkable(this.district.at(nextCol, nextRow))) continue;
+        const key = tileKey(nextCol, nextRow);
+        if (distances.has(key)) continue;
+        distances.set(key, (steps + 1) * VIEW.tile);
+        queue.push({ col: nextCol, row: nextRow, steps: steps + 1 });
+      }
     }
-    return pieces;
+    return point => {
+      const col = Math.floor((point.x - this.district.x) / VIEW.tile);
+      const row = Math.floor((point.y - this.district.y) / VIEW.tile);
+      return distances.get(tileKey(col, row)) ?? Infinity;
+    };
   }
 }
