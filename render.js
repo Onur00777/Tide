@@ -284,15 +284,37 @@ class Renderer {
       const action = game.interaction;
       if (action?.type === 'land') this.ring(action.landing.x, action.landing.y, 12, '#ffe1a6', game.time);
       this.drawExpedition(game.expedition, game.time);
+      if (game.rescue.stranded) this.drawDistress(game.rescue.stranded, game.time);
     }
     const anchored = game.mode === 'foot';
-    this.drawBoat(game.boat, game.time, anchored, night, waterMask, anchored ? [] : game.cargo);
-    if (anchored) this.drawWalker(game.walker, game.time);
+    this.drawBoat(game.boat, game.time, anchored, night, waterMask, anchored ? [] : game.cargo, game.rescue.passenger);
+    if (anchored) this.drawWalker(game.walker, game.time, game.rescue.carrying);
     const target = game.target;
     if (target?.label === 'Batık kıyı') {
       this.ring(target.point.x, target.point.y, 15, '#8fedd7', game.time);
       this.glow(target.point.x, target.point.y, 22, 0.16);
     }
+  }
+
+  drawCrewMember(x, y, color) {
+    const ctx = this.ctx;
+    ctx.fillStyle = '#17232c';
+    ctx.fillRect(x - 3, y + 3, 2, 4);
+    ctx.fillRect(x + 1, y + 3, 2, 4);
+    ctx.fillStyle = color;
+    ctx.fillRect(x - 4, y - 1, 8, 6);
+    this.disc(x, y - 3, 3, '#eac094');
+    ctx.fillStyle = '#3d4548';
+    ctx.fillRect(x - 3, y - 5, 6, 2);
+  }
+
+  drawDistress({ x, y, member }, time) {
+    const beacon = time % 2.8;
+    const signaling = beacon < 0.3 || (beacon > 0.55 && beacon < 0.9);
+    this.ring(x, y, 12, member.color, time);
+    this.drawCrewMember(x, y, member.color);
+    this.glow(x + 6, y - 8, signaling ? 37 : 17, signaling ? 0.72 : 0.19);
+    this.disc(x + 6, y - 8, 2.1, '#fff1c0');
   }
 
   drawDistrictConditions(game) {
@@ -592,7 +614,7 @@ class Renderer {
     this.disc(x, y, 2, '#fff0b2');
   }
 
-  drawBoat(boat, time, anchored, night, waterMask, cargo) {
+  drawBoat(boat, time, anchored, night, waterMask, cargo, passenger) {
     const ctx = this.ctx;
     const speed = boat.currentSpeed / boat.speed;
     const roll = Math.sin(time * 2.8 + boat.x * 0.014 + boat.y * 0.023);
@@ -657,6 +679,13 @@ class Renderer {
     ctx.fillRect(-14, -2.4, 0.9, 3.7);
     this.disc(7, 0, 2.7, '#5c4033');
     this.disc(7, 0, 1.4 + night * 0.45, '#fff0bc');
+    if (passenger) {
+      ctx.save();
+      ctx.translate(2, -2);
+      ctx.scale(0.68, 0.68);
+      this.drawCrewMember(0, 0, passenger.color);
+      ctx.restore();
+    }
     ctx.restore();
   }
 
@@ -694,7 +723,7 @@ class Renderer {
     ctx.restore();
   }
 
-  drawWalker(walker, time) {
+  drawWalker(walker, time, carrying) {
     const ctx = this.ctx;
     this.glow(walker.x, walker.y, 24, 0.23);
     ctx.save();
@@ -713,6 +742,11 @@ class Renderer {
     ctx.fillRect(-4.5, -3, 3, 6);
     this.disc(2.1, 0, 3.6, '#ebb37e');
     this.disc(3.8, -0.2, 1.35, '#fff0c2');
+    if (carrying) {
+      const offset = -5 + pace * 0.4;
+      this.disc(offset, 0, 4, carrying.color);
+      this.disc(offset, -3.8, 2.6, '#eac094');
+    }
     ctx.restore();
   }
 

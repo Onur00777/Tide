@@ -11,6 +11,8 @@ class HarborProgress {
     const ids = Array.isArray(saved.relics) ? saved.relics : [];
     this.relics = new Set(ids.filter(id => typeof id === 'string' && Object.hasOwn(RELICS, id)));
     this.tier = Number.isSafeInteger(saved.tier) ? clamp(saved.tier, 0, HARBOR_GOALS.length) : 0;
+    const crew = Array.isArray(saved.crew) ? saved.crew : [];
+    this.crew = new Set(crew.filter(id => typeof id === 'string' && Object.hasOwn(CREW, id)));
   }
 
   get built() { return HARBOR_GOALS.slice(0, this.tier); }
@@ -29,7 +31,7 @@ class HarborProgress {
     return HARBOR_GOALS[this.tier++];
   }
 
-  snapshot() { return { tier: this.tier, relics: [...this.relics] }; }
+  snapshot() { return { tier: this.tier, relics: [...this.relics], crew: [...this.crew] }; }
 }
 
 class ProgressSave {

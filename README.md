@@ -22,12 +22,15 @@ Yosun ve çamurun etrafından dolaşabilir, su yükselince açık renkli taşlar
 
 İlk rotada Boğulmuş Kaptanın Günlüğü’nü bul. İskelede indirince **Yükselt** düğmesi açılır. Liman atölyesinden feneri, demirciyi ve derin su vincini kur. Atölyedeki rota düğmesiyle açık mahalleler arasında geçiş yap.
 
+Bazı seferlerde mahallenin içinden bir yardım ışığı gelir. Mahsur kalan kişiye yaklaş ve **E** ile sırtla. Yüksek rotadan tekneye dönüp Başlangıç Limanı'na yanaştığında kurtardığın mürettebat kalıcı olarak yerleşir.
+
 Teslim edilen eserler ve inşa edilen yükseltmeler tarayıcıda saklanır. Açık sefer ve teslim edilmemiş yük sayfayı yenilediğinde sıfırlanır. Önceki sürümde kaydedilen koleksiyon eserleri aktarılır.
 
 ## Kod yapısı
 
 - `world.js` harita, çarpışma ve gelgit kurallarını tutar.
 - `expedition.js` mahalleleri, kasa konumlarını ve eserleri tanımlar.
+- `crew.js` mahsur kalan mürettebatı ve tekneye taşıma durumunu yönetir.
 - `progression.js` koleksiyonu, liman yükseltmelerini ve yerel kaydı yönetir.
 - `game.js` tekne fiziğini ve oynanış etkileşimlerini yürütür.
 - `camera.js` tam ekran takip kamerasını yönetir. `render.js` haritayı ve aktörleri çizer.

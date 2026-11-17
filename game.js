@@ -74,6 +74,7 @@ class Game {
     this.world = new World();
     this.tide = new Tide();
     this.expedition = new Expedition(this.world);
+    this.rescue = new CrewRescue();
     this.harbor = new HarborProgress(saved);
     this.persist = persist;
     this.route = Math.min(this.harbor.tier, DISTRICTS.length - 1);
@@ -101,21 +102,28 @@ class Game {
 
   get target() {
     if (this.mode === 'foot') {
-      if (this.full || this.threat === 'critical') return { point: this.boat, label: 'Tekne', kind: 'home' };
+      if (this.rescue.carrying || this.full || this.threat === 'critical') return { point: this.boat, label: 'Tekne', kind: 'home' };
+      const survivor = this.rescue.stranded;
+      if (survivor && distance(this.walker, survivor) < 112) {
+        return { point: survivor, label: survivor.member.name, kind: 'crew' };
+      }
       const site = this.expedition.nearest(this.walker);
       return site ? { point: site, label: 'Kasa', kind: 'vault' } : { point: this.boat, label: 'Tekne', kind: 'home' };
     }
-    if (this.cargo.length || this.harbor.ready) return { point: this.world.dock, label: 'Liman', kind: 'home' };
+    if (this.rescue.passenger || this.cargo.length || this.harbor.ready) return { point: this.world.dock, label: 'Liman', kind: 'home' };
     if (!this.atDock || this.tide.exposed) return { point: { x: 546, y: 316 }, label: 'Batık kıyı', kind: 'vault' };
     return null;
   }
 
   get objective() {
     if (this.mode === 'foot') {
+      if (this.rescue.carrying) return `${this.rescue.carrying.name} ile tekneye dön`;
       if (this.threat === 'critical') return 'Yüksek rotadan tekneye dön';
+      if (this.rescue.stranded && distance(this.walker, this.rescue.stranded) < 112) return 'Yardım ışığına yaklaş';
       if (this.full) return 'Yük dolu · Tekneye dön';
       return this.expedition.nearest(this.walker) ? 'Bir kasa bul' : 'Kasalar açıldı · Tekneye dön';
     }
+    if (this.rescue.passenger) return `${this.rescue.passenger.name} ile limana dön`;
     if (this.cargo.length) return 'Limanın ışığını izle';
     if (this.harbor.ready) return this.atDock ? 'Yükseltme hazır' : 'Limanın ışığını izle';
     return this.tide.exposed ? 'Kıyıya yanaş' : 'Çekilmeyi bekle';
@@ -127,9 +135,13 @@ class Game {
         return { type: 'board', label: 'Tekneye bin' };
       }
       if (this.expedition.opening) return null;
+      const survivor = this.rescue.stranded;
+      if (survivor && distance(this.walker, survivor) < 20) {
+        return { type: 'rescue', label: `${survivor.member.name} · Sırtla` };
+      }
       const tile = this.world.district.tileAt(this.walker.x, this.walker.y);
       const site = this.tide.exposed && this.world.wetness(tile, this.tide.water) < 0.4
-        && !this.full && this.expedition.nearest(this.walker, 35);
+        && !this.rescue.carrying && !this.full && this.expedition.nearest(this.walker, 35);
       return site ? { type: 'open', label: `${site.label} · ${site.seconds} sn`, site } : null;
     }
     if (this.atDock && this.cargo.length) return { type: 'archive', label: 'Buluntuları indir' };
@@ -150,6 +162,13 @@ class Game {
       const end = this.world.district.tileAt(actor.x, actor.y);
       if (start !== end && this.world.isRaised(end)) actor.hopAt = this.time;
       this.openVault(seconds, dx !== 0 || dy !== 0 || this.world.wetness(end, this.tide.water) >= 0.4);
+    } else if (this.atDock && this.rescue.passenger) {
+      const member = this.rescue.passenger;
+      this.rescue.passenger = null;
+      this.harbor.crew.add(member.id);
+      this.persist(this.harbor);
+      this.signal('delivery', this.world.dock);
+      this.announce('MÜRETTEBAT GÜVENDE', `${member.name} limana yerleşti`, 'find', 4);
     }
   }
 
@@ -178,6 +197,7 @@ class Game {
     if (index === 2) {
       const district = this.mode === 'foot' ? this.expedition.district : this.nextDistrict;
       this.expedition.begin(district, this.harbor.relics, this.cargo);
+      this.rescue.begin(this.world, this.harbor.crew, this.expedition.sites);
       if (this.mode === 'boat' && !this.world.canOccupy(this.boat.x, this.boat.y, this.boat.radius, 'boat', true)) {
         Object.assign(this.boat, this.world.nearestWater(this.boat));
         this.boat.stop();
@@ -188,6 +208,7 @@ class Game {
     if (this.tide.rising && this.mode === 'foot') this.announce('KIYIYA DÖN', 'Su yükseliyor', 'danger', 3.3);
     if (index === 0) {
       this.expedition.end();
+      this.rescue.stranded = null;
       if (this.mode === 'foot') {
         const tile = this.world.district.tileAt(this.walker.x, this.walker.y);
         const lost = !this.world.isRaised(tile) && this.cargo.pop();
@@ -202,10 +223,16 @@ class Game {
     const action = this.interaction;
     if (!action) return;
     if (action.type === 'board') {
+      this.rescue.board();
       this.mode = 'boat';
       this.walker.moving = false;
       this.expedition.opening = null;
       this.world.escape.clear();
+    }
+    if (action.type === 'rescue') {
+      this.rescue.take();
+      this.signal('rescue', this.walker);
+      this.announce('YARDIM ULAŞTI', 'Tekneye dön', 'find', 2.5);
     }
     if (action.type === 'land') {
       Object.assign(this.walker, { x: action.landing.x, y: action.landing.y, moving: false, heading: this.boat.heading });
