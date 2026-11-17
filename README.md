@@ -1,4 +1,4 @@
-# TIDE
+# TIDE · v1.0
 
 Tide (Gelgit), tam ekran kamerayla oynanan bir kıyı keşif oyunu. Sular çekilince batık mahallelerdeki kasaları aç, buluntuları koleksiyona kat ve limana yeni yapılar kur.
 
@@ -13,7 +13,8 @@ Bu klasördeki `index.html` dosyasını tarayıcıda aç. Kurulum veya yerel sun
 - Kasayı açarken veya vinçle çekerken yerinde dur. Hareket edersen işlem kesilir.
 - **R** veya gövde göstergesinin yanındaki düğmeyle tekneyi tamir et.
 - **Esc** ile oyunu duraklat veya sürdür.
-- Üst çubuktan koleksiyonunu açabilir ve sesi kapatabilirsin. Ses ilk tıklama veya tuş basımından sonra etkinleşir.
+- Üst çubuktan koleksiyonunu açabilirsin. **Ses** düğmesi açık, kısık ve sessiz düzeyleri arasında geçiş yapar. Tercih tarayıcıda saklanır.
+- Deniz, gelgit ve etkileşim sesleri ilk tıklama veya tuş basımından sonra Web Audio API ile üretilir. Oyun duraklatıldığında veya sekme arka plana geçtiğinde ses yumuşakça kesilir.
 
 ## Sefer
 
@@ -44,5 +45,6 @@ Teslim edilen eserler, limana yerleşen mürettebat, yükseltmeler, hurda stoğu
 - `boat.js` teknenin hareketini, çarpışma hasarını ve su almasını yönetir.
 - `game.js` oynanış etkileşimlerini yürütür.
 - `camera.js` tam ekran takip kamerasını yönetir. `render.js` haritayı ve aktörleri çizer.
-- `feedback.js` ortam olaylarının seslerini ve görsel efektlerini üretir.
+- `audio.js` deniz ambiyansını ve oyun seslerini sentezler.
+- `feedback.js` oyun olaylarını ses ve görsel efektlere dönüştürür.
 - `main.js` klavyeyi, arayüzü ve tarayıcı döngüsünü bağlar.
