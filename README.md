@@ -10,7 +10,8 @@ Bu klasördeki `index.html` dosyasını tarayıcıda aç. Kurulum veya yerel sun
 
 - **WASD** veya **ok tuşları** ile tekneyi ve karakteri hareket ettir.
 - **E** veya ekrandaki etkileşim düğmesiyle karaya çık, kasayı aç, tekneye bin ya da buluntuları indir.
-- Kasayı açarken yerinde dur. Hareket edersen işlem kesilir.
+- Kasayı açarken veya vinçle çekerken yerinde dur. Hareket edersen işlem kesilir.
+- **R** veya gövde göstergesinin yanındaki düğmeyle tekneyi tamir et.
 - **Esc** ile oyunu duraklat veya sürdür.
 - Üst çubuktan koleksiyonunu açabilir ve sesi kapatabilirsin. Ses ilk tıklama veya tuş basımından sonra etkinleşir.
 
@@ -26,7 +27,13 @@ Bazı seferlerde mahallenin içinden bir yardım ışığı gelir. Mahsur kalan 
 
 Yerleşen her mürettebat üyesi liman atölyesinde kendi sekmesini açar. Demirci ocağı yük kapasitesini artırır. Fenercinin projesi fenerin ışığını genişletir ve kıyıya balık ağları ekler. Tersane ustası ahşap iskeleyi büyütür, vincini kurar ve tekneyi hızlandırır. Her proje limana ışıklı bir ev ekler.
 
-Teslim edilen eserler, limana yerleşen mürettebat ve inşa edilen yükseltmeler tarayıcıda saklanır. Açık sefer ve teslim edilmemiş yük sayfayı yenilediğinde sıfırlanır. Önceki sürümde kaydedilen koleksiyon eserleri aktarılır.
+## Tekne ve atölye
+
+Tekne gazı bıraktığında süzülür. Yük, su alma ve kıyı akıntısı dümen tepkisini değiştirir. Kayalara, duvarlara veya iskeleye sert vurursan gövde hasar alır. Limanda tamir ücretsizdir. Açıkta iki hurda gövdeyi 34 puana kadar onarır ve teknede biriken suyu boşaltır. Yeni bir eseri teslim etmek bir hurda kazandırır. Daha önce kayda alınan eserlerin kasaları iki hurda verir.
+
+Başlangıçta teknede fener yoktur. Demirci sekmesinden hurdayla pruva feneri, daha uzun menzilli mercek, motor ve gövde zırhı takabilirsin. Tersane Ustası sekmesinden tekne vincini alabilirsin. Yüksek suda batık ağır kasaya yaklaş, hızını düşür ve **E** ile vinci çalıştır. Ağır kasa bir yük yuvası kaplar ve dört hurda taşır.
+
+Teslim edilen eserler, limana yerleşen mürettebat, yükseltmeler, hurda stoğu ve gövde durumu tarayıcıda saklanır. Açık sefer ve teslim edilmemiş yük sayfayı yenilediğinde sıfırlanır. Önceki sürümde kaydedilen koleksiyon eserleri aktarılır.
 
 ## Kod yapısı
 
@@ -34,7 +41,8 @@ Teslim edilen eserler, limana yerleşen mürettebat ve inşa edilen yükseltmele
 - `expedition.js` mahalleleri, kasa konumlarını ve eserleri tanımlar.
 - `crew.js` mahsur kalan mürettebatı ve tekneye taşıma durumunu yönetir.
 - `progression.js` koleksiyonu, liman yükseltmelerini ve yerel kaydı yönetir.
-- `game.js` tekne fiziğini ve oynanış etkileşimlerini yürütür.
+- `boat.js` teknenin hareketini, çarpışma hasarını ve su almasını yönetir.
+- `game.js` oynanış etkileşimlerini yürütür.
 - `camera.js` tam ekran takip kamerasını yönetir. `render.js` haritayı ve aktörleri çizer.
 - `feedback.js` ortam olaylarının seslerini ve görsel efektlerini üretir.
 - `main.js` klavyeyi, arayüzü ve tarayıcı döngüsünü bağlar.
