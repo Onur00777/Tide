@@ -21,6 +21,7 @@ class HarborProgress {
     this.crew = new Set(crew.filter(id => typeof id === 'string' && Object.hasOwn(CREW, id)));
     const projects = Array.isArray(saved.projects) ? saved.projects : [];
     this.projects = new Set(projects.filter(id => this.crew.has(id)));
+    this.hull = Number.isFinite(saved.hull) ? clamp(Math.round(saved.hull), 0, 100) : 100;
   }
 
   get built() { return HARBOR_GOALS.slice(0, this.tier); }
@@ -54,7 +55,7 @@ class HarborProgress {
   }
 
   snapshot() {
-    return { tier: this.tier, relics: [...this.relics], crew: [...this.crew], projects: [...this.projects] };
+    return { tier: this.tier, relics: [...this.relics], crew: [...this.crew], projects: [...this.projects], hull: this.hull };
   }
 }
 

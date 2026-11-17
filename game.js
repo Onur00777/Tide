@@ -25,50 +25,6 @@ class Actor {
   }
 }
 
-class Boat extends Actor {
-  constructor(x, y) {
-    super(x, y, 11, 187);
-    this.stop();
-  }
-
-  get currentSpeed() { return Math.hypot(this.velocityX, this.velocityY); }
-
-  move(dx, dy, seconds, canMove) {
-    const input = Math.hypot(dx, dy);
-    if (!input && this.currentSpeed < 4) {
-      this.stop();
-      return;
-    }
-
-    const throttle = input ? this.speed / input : 0;
-    const targetX = dx * throttle;
-    const targetY = dy * throttle;
-    const response = input ? 6.5 : 4.2;
-    const blend = -Math.expm1(-response * seconds);
-    const x = this.x;
-    const y = this.y;
-
-    // Integrate the velocity change over the frame so coasting is consistent across refresh rates.
-    const stepX = targetX * seconds + (this.velocityX - targetX) * blend / response;
-    const stepY = targetY * seconds + (this.velocityY - targetY) * blend / response;
-    this.velocityX += (targetX - this.velocityX) * blend;
-    this.velocityY += (targetY - this.velocityY) * blend;
-    this.moveBy(stepX, stepY, canMove);
-    if (stepX && this.x === x) this.velocityX = 0;
-    if (stepY && this.y === y) this.velocityY = 0;
-    if (this.currentSpeed > 4) {
-      const turn = Math.atan2(this.velocityY, this.velocityX) - this.heading;
-      this.heading += Math.atan2(Math.sin(turn), Math.cos(turn)) * -Math.expm1(-10 * seconds);
-    }
-  }
-
-  stop() {
-    this.velocityX = 0;
-    this.velocityY = 0;
-    this.moving = false;
-  }
-}
-
 class Game {
   constructor(saved, persist = () => {}) {
     this.world = new World();
@@ -81,7 +37,7 @@ class Game {
     this.route = Math.min(this.harbor.tier, DISTRICTS.length - 1);
     this.expedition.district = this.nextDistrict;
     if (this.route) this.world.setDistrict(this.nextDistrict.map);
-    this.boat = new Boat(411, 348);
+    this.boat = new Boat(411, 348, this.harbor.hull);
     this.boat.speed = this.harbor.boatSpeed;
     this.walker = new Actor(0, 0, 6, 81);
     this.mode = 'boat';
@@ -157,8 +113,13 @@ class Game {
     const actor = this.mode === 'boat' ? this.boat : this.walker;
     const onFoot = this.mode === 'foot';
     const start = onFoot && this.world.district.tileAt(actor.x, actor.y);
-    const movementTime = onFoot ? seconds * this.world.walkingFactor(start, this.tide.water) : seconds;
-    actor.move(dx, dy, movementTime, (x, y) => this.world.canOccupy(x, y, actor.radius, this.mode, this.tide.exposed));
+    const canMove = (x, y) => this.world.canOccupy(x, y, actor.radius, this.mode, this.tide.exposed);
+    if (onFoot) {
+      actor.move(dx, dy, seconds * this.world.walkingFactor(start, this.tide.water), canMove);
+    } else {
+      this.boat.load = (this.cargo.length + Number(Boolean(this.rescue.passenger)) * 0.55) / this.harbor.capacity;
+      this.boat.move(dx, dy, seconds, this.world.currentAt(this.boat, this.tide), canMove, damage => this.onImpact(damage));
+    }
     if (onFoot) {
       const end = this.world.district.tileAt(actor.x, actor.y);
       if (start !== end && this.world.isRaised(end)) actor.hopAt = this.time;
@@ -171,6 +132,13 @@ class Game {
       this.signal('delivery', this.world.dock);
       this.announce('MÜRETTEBAT GÜVENDE', `${member.name} limana yerleşti`, 'find', 4);
     }
+  }
+
+  onImpact(damage) {
+    this.harbor.hull = this.boat.hull;
+    this.persist(this.harbor);
+    this.signal('impact', this.boat);
+    this.announce('GÖVDE HASARI', '−' + damage + ' · Tekne su alıyor', 'danger', 2.5);
   }
 
   openVault(seconds, moving) {

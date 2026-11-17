@@ -698,7 +698,7 @@ class Renderer {
 
   drawBoat(boat, time, anchored, night, waterMask, cargo, passenger) {
     const ctx = this.ctx;
-    const speed = boat.currentSpeed / boat.speed;
+    const speed = clamp(boat.currentSpeed / 210, 0, 1);
     const roll = Math.sin(time * 2.8 + boat.x * 0.014 + boat.y * 0.023);
     if (anchored) this.ring(boat.x, boat.y, 21, '#f3ca8a', time);
     if (boat.moving) {
@@ -711,6 +711,7 @@ class Renderer {
     ctx.translate(boat.x, boat.y);
     ctx.rotate(boat.heading + roll * 0.032);
     ctx.translate(0, roll * 0.8);
+    ctx.scale(1, 1 - boat.draft * 0.22);
 
     ctx.fillStyle = '#02161c91';
     ctx.beginPath();
@@ -751,6 +752,10 @@ class Renderer {
       ctx.fillStyle = '#8d563c';
       ctx.fillRect(x + 1.45, y + 0.05, 0.7, 3.1);
     }
+    if (boat.flood > 0.01) {
+      ctx.fillStyle = 'rgba(30, 104, 126, ' + boat.flood * 0.63 + ')';
+      ctx.fillRect(-12, 4 - boat.flood * 8, 26, 12);
+    }
     ctx.restore();
     ctx.strokeStyle = '#e4c69b';
     ctx.lineWidth = 1.55;
@@ -774,7 +779,7 @@ class Renderer {
   drawWake(boat, time, speed) {
     const ctx = this.ctx;
     const length = 8 + speed * 45;
-    const spread = 5 + speed * 10;
+    const spread = 4 + speed * 12 + boat.draft * 4;
     ctx.save();
     ctx.translate(boat.x, boat.y);
     ctx.rotate(Math.atan2(boat.velocityY, boat.velocityX));

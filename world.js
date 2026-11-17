@@ -189,10 +189,19 @@ class World {
       for (const dy of [-radius, radius]) {
         const type = this.terrainAt(x + dx, y + dy);
         if (mode === 'foot' && !this.isFootTile(this.district.tileAt(x + dx, y + dy))) return false;
-        if (mode === 'boat' && (type === TERRAIN.harbor || type === TERRAIN.pier || (exposed && type !== TERRAIN.sea))) return false;
+        if (mode === 'boat' && (type === TERRAIN.harbor || type === TERRAIN.pier || type === TERRAIN.rubble || type === TERRAIN.door || (exposed && type !== TERRAIN.sea))) return false;
       }
     }
     return true;
+  }
+
+  currentAt(point, tide) {
+    const fraction = clamp(tide.elapsed / tide.duration, 0, 1);
+    const ebb = tide.index === 1 ? -25 * Math.sin(fraction * Math.PI) : 0;
+    const flood = tide.rising ? 31 * Math.sin(fraction * Math.PI) : tide.warning ? 6 * tide.surge : 0;
+    const exposure = clamp((point.x - 408) / 200, 0, 1);
+    const strength = (ebb + flood) * exposure;
+    return { x: strength * 0.88, y: strength * clamp((point.y - 308) / 220, -0.5, 0.5) };
   }
 
   landingNear(boat) {
