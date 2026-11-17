@@ -31,7 +31,7 @@ function seaNoise(context) {
       low = 0.979 * low + white * 0.063;
       mid = 0.882 * mid + white * 0.111;
       brown = 0.996 * brown + white * 0.041;
-      const sample = (bass + low + mid) * 0.34 + brown * 0.44;
+      const sample = (bass + low + mid) * 0.16 + brown * 0.21;
       if (i < frames) {
         samples[i] = sample;
       } else {
