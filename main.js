@@ -30,8 +30,9 @@ class Hud {
     const ids = ['game', 'phase', 'mode', 'location', 'objective', 'cargo',
       'banner', 'banner-caption', 'banner-title', 'waypoint', 'waypoint-arrow', 'waypoint-name',
       'action', 'action-label', 'opening', 'opening-label', 'opening-meter', 'harbor', 'harbor-title', 'harbor-requirement',
-      'upgrade', 'route', 'pause', 'pause-layer', 'resume', 'sound', 'collection', 'collection-open', 'collection-items'];
+      'upgrade', 'crew-tabs', 'crew-upgrade', 'route', 'pause', 'pause-layer', 'resume', 'sound', 'collection', 'collection-open', 'collection-items'];
     this.ui = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
+    this.harborTab = '';
   }
 
   text(id, value) {
@@ -62,13 +63,7 @@ class Hud {
     }
 
     this.ui.harbor.hidden = !game.atDock || paused;
-    const goal = harbor.next;
-    this.text('harbor-title', goal?.title ?? 'Liman tamamlandı');
-    this.text('harbor-requirement', harbor.ready ? 'Geliştirme hazır' : goal?.relic.name ?? '');
-    this.ui.upgrade.disabled = !harbor.ready;
-    this.ui.upgrade.hidden = !goal;
-    this.ui.route.hidden = !harbor.tier;
-    this.text('route', 'Rota · ' + game.nextDistrict.name + '  ↻');
+    if (!this.ui.harbor.hidden) this.drawHarbor(harbor, game.nextDistrict);
 
     this.ui.pause.setAttribute('aria-pressed', String(paused));
     this.ui['pause-layer'].hidden = !paused || this.ui.collection.open;
@@ -80,6 +75,38 @@ class Hud {
       this.text('banner-title', banner.title);
     }
     this.drawWaypoint(game.target, camera, paused);
+  }
+
+  drawHarbor(harbor, district) {
+    const tabs = this.ui['crew-tabs'];
+    tabs.hidden = !harbor.crew.size;
+    if (this.crewCount !== harbor.crew.size) {
+      this.crewCount = harbor.crew.size;
+      const members = Object.values(CREW).filter(member => harbor.crew.has(member.id));
+      tabs.replaceChildren(...[{ id: '', name: 'Liman' }, ...members].map(({ id, name }) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = name;
+        button.dataset.project = id;
+        return button;
+      }));
+    }
+    for (const button of tabs.children) {
+      const active = String(button.dataset.project === this.harborTab);
+      if (button.getAttribute('aria-pressed') !== active) button.setAttribute('aria-pressed', active);
+    }
+
+    const project = CREW_PROJECTS[this.harborTab];
+    const goal = harbor.next;
+    const complete = harbor.projects.has(this.harborTab);
+    this.text('harbor-title', project?.title ?? goal?.title ?? 'Liman tamamlandı');
+    this.text('harbor-requirement', project ? (complete ? 'İnşa tamamlandı' : project.detail)
+      : (harbor.ready ? 'Geliştirme hazır' : goal?.relic.name ?? ''));
+    this.ui['crew-upgrade'].hidden = !project || complete;
+    this.ui.upgrade.disabled = !harbor.ready;
+    this.ui.upgrade.hidden = Boolean(project) || !goal;
+    this.ui.route.hidden = Boolean(project) || !harbor.tier;
+    this.text('route', 'Rota · ' + district.name + '  ↻');
   }
 
   drawCargo(items, capacity) {
@@ -157,6 +184,10 @@ hud.ui.pause.addEventListener('click', togglePause);
 hud.ui.resume.addEventListener('click', togglePause);
 hud.ui.action.addEventListener('click', () => game.interact());
 hud.ui.upgrade.addEventListener('click', () => game.upgrade());
+hud.ui['crew-tabs'].addEventListener('click', event => {
+  if (event.target.matches('button[data-project]')) hud.harborTab = event.target.dataset.project;
+});
+hud.ui['crew-upgrade'].addEventListener('click', () => game.buildCrewProject(hud.harborTab));
 hud.ui.route.addEventListener('click', () => game.switchRoute());
 
 window.addEventListener('pointerdown', () => feedback.audio.unlock());

@@ -24,7 +24,9 @@ Yosun ve çamurun etrafından dolaşabilir, su yükselince açık renkli taşlar
 
 Bazı seferlerde mahallenin içinden bir yardım ışığı gelir. Mahsur kalan kişiye yaklaş ve **E** ile sırtla. Yüksek rotadan tekneye dönüp Başlangıç Limanı'na yanaştığında kurtardığın mürettebat kalıcı olarak yerleşir.
 
-Teslim edilen eserler ve inşa edilen yükseltmeler tarayıcıda saklanır. Açık sefer ve teslim edilmemiş yük sayfayı yenilediğinde sıfırlanır. Önceki sürümde kaydedilen koleksiyon eserleri aktarılır.
+Yerleşen her mürettebat üyesi liman atölyesinde kendi sekmesini açar. Demirci ocağı yük kapasitesini artırır. Fenercinin projesi fenerin ışığını genişletir ve kıyıya balık ağları ekler. Tersane ustası ahşap iskeleyi büyütür, vincini kurar ve tekneyi hızlandırır. Her proje limana ışıklı bir ev ekler.
+
+Teslim edilen eserler, limana yerleşen mürettebat ve inşa edilen yükseltmeler tarayıcıda saklanır. Açık sefer ve teslim edilmemiş yük sayfayı yenilediğinde sıfırlanır. Önceki sürümde kaydedilen koleksiyon eserleri aktarılır.
 
 ## Kod yapısı
 

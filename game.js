@@ -76,6 +76,7 @@ class Game {
     this.expedition = new Expedition(this.world);
     this.rescue = new CrewRescue();
     this.harbor = new HarborProgress(saved);
+    this.world.setHarborExpanded(this.harbor.projects.has('shipwright'));
     this.persist = persist;
     this.route = Math.min(this.harbor.tier, DISTRICTS.length - 1);
     this.expedition.district = this.nextDistrict;
@@ -264,6 +265,21 @@ class Game {
     this.persist(this.harbor);
     this.signal('upgrade', goal);
     this.announce('LİMAN BÜYÜDÜ', goal.title, 'upgrade', 4);
+  }
+
+  buildCrewProject(id) {
+    if (this.paused || !this.atDock) return;
+    const project = this.harbor.buildProject(id);
+    if (!project) return;
+    this.boat.stop();
+    this.boat.speed = this.harbor.boatSpeed;
+    this.world.setHarborExpanded(this.harbor.projects.has('shipwright'));
+    if (!this.world.canOccupy(this.boat.x, this.boat.y, this.boat.radius, 'boat', this.tide.exposed)) {
+      Object.assign(this.boat, this.world.dock);
+    }
+    this.persist(this.harbor);
+    this.signal('upgrade', project);
+    this.announce('LİMAN BÜYÜDÜ', project.title, 'upgrade', 4);
   }
 
   switchRoute() {

@@ -16,6 +16,8 @@ const HARBOR_MAP = [
   '  HHHH',
 ];
 
+const SHIPYARD_MAP = HARBOR_MAP.map((row, index) => index === 3 ? row + 'PPP' : row);
+
 const DISTRICT_MAP = [
   '      .......',
   '    ...#..##....',
@@ -123,10 +125,15 @@ class TilePatch {
 
 class World {
   constructor() {
-    this.harbor = new TilePatch(64, 208, HARBOR_MAP);
+    this.setHarborExpanded(false);
     this.dock = { x: 390, y: 348 };
     this.lighthouse = { x: 127, y: 288 };
     this.setDistrict(DISTRICT_MAP);
+  }
+
+  setHarborExpanded(expanded) {
+    const map = expanded ? SHIPYARD_MAP : HARBOR_MAP;
+    if (this.harbor?.rows !== map) this.harbor = new TilePatch(64, 208, map);
   }
 
   setDistrict(rows) {

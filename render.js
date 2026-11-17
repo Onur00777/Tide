@@ -24,6 +24,12 @@ function noiseFrom(seed) {
   };
 }
 
+const HARBOR_HOMES = {
+  smith: { x: 140, y: 416, roof: '#975f4b' },
+  diver: { x: 198, y: 272, roof: '#6a8782' },
+  shipwright: { x: 239, y: 407, roof: '#98754e' },
+};
+
 class Renderer {
   constructor(canvas, world) {
     this.ctx = canvas.getContext('2d');
@@ -33,16 +39,23 @@ class Renderer {
       x: random() * VIEW.width, y: random() * VIEW.height,
       length: 8 + random() * 27, offset: random() * Math.PI * 2,
     })));
-    this.harbor = this.paintPatch(world.harbor, false);
     this.districtLayers = new Map();
-    this.openWater = new Path2D();
-    this.openWater.rect(0, 0, VIEW.width, VIEW.height);
-    this.openWater.addPath(this.harbor.land);
+    this.refreshHarbor();
     const ctx = this.ctx;
     this.sea = this.paintSea();
     this.vignette = ctx.createRadialGradient(550, 286, 125, 550, 286, 635);
     this.vignette.addColorStop(0, '#04142100');
     this.vignette.addColorStop(1, '#041421a8');
+  }
+
+  refreshHarbor() {
+    if (this.harborPatch === this.world.harbor) return;
+    this.harborPatch = this.world.harbor;
+    this.harbor = this.paintPatch(this.harborPatch, false);
+    this.openWater = new Path2D();
+    this.openWater.rect(0, 0, VIEW.width, VIEW.height);
+    this.openWater.addPath(this.harbor.land);
+    this.districtLayers.clear();
   }
 
   districtLayer() {
@@ -250,6 +263,7 @@ class Renderer {
 
   draw(game) {
     const ctx = this.ctx;
+    this.refreshHarbor();
     const district = this.districtLayer();
     const water = game.tide.water;
     const night = 0.38 + (1 - water) * 0.62;
@@ -487,7 +501,7 @@ class Renderer {
     ctx.beginPath();
     ctx.arc(x, y, 18, Math.PI * 0.12, Math.PI * 1.12);
     ctx.stroke();
-    for (const building of progress.built) {
+    for (const building of progress.structures) {
       if (building.sprite === 'forge') {
         const { x, y } = building;
         ctx.fillStyle = '#111b218a';
@@ -522,6 +536,64 @@ class Renderer {
         this.disc(building.x, building.y, 6, '#f7d293');
       }
     }
+    if (progress.projects.has('diver')) {
+      this.fishingNet(271, 351);
+      this.fishingNet(322, 362);
+    }
+    if (progress.projects.has('shipwright')) {
+      for (const x of [292, 318, 344, 368]) {
+        this.disc(x + 1, 295, 4, '#50382d');
+        this.disc(x, 294, 3, '#c49968');
+      }
+    }
+    for (const id of progress.crew) {
+      const station = CREW_PROJECTS[id];
+      this.drawCrewMember(station.x + 14, id === 'shipwright' ? 350 : station.y + 22, CREW[id].color);
+    }
+    for (const id of progress.projects) this.harborHouse(HARBOR_HOMES[id]);
+  }
+
+  harborHouse({ x, y, roof }) {
+    const ctx = this.ctx;
+    ctx.fillStyle = '#182726a8';
+    ctx.fillRect(x - 13, y - 6, 34, 22);
+    ctx.fillStyle = '#856b51';
+    ctx.fillRect(x - 14, y - 8, 28, 19);
+    ctx.fillStyle = roof;
+    ctx.beginPath();
+    ctx.moveTo(x - 17, y - 2);
+    ctx.lineTo(x - 12, y - 13);
+    ctx.lineTo(x + 12, y - 13);
+    ctx.lineTo(x + 17, y - 2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#eed9b04f';
+    ctx.fillRect(x - 12, y - 12, 24, 1.5);
+    ctx.fillStyle = '#462f29';
+    ctx.fillRect(x - 2, y + 3, 4, 8);
+  }
+
+  fishingNet(x, y) {
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(-0.26);
+    ctx.fillStyle = '#243d40b8';
+    ctx.fillRect(-15, -7, 30, 14);
+    ctx.strokeStyle = '#c3ab7fbe';
+    ctx.lineWidth = 0.7;
+    ctx.beginPath();
+    for (let i = -15; i <= 15; i += 4) {
+      ctx.moveTo(i, -7);
+      ctx.lineTo(i, 7);
+    }
+    for (const offset of [-7, -3, 1, 5, 7]) {
+      ctx.moveTo(-15, offset);
+      ctx.quadraticCurveTo(0, offset + 3, 15, offset);
+    }
+    ctx.stroke();
+    for (const offset of [-13, -6, 6, 13]) this.disc(offset, -7, 1.6, '#e5be89');
+    ctx.restore();
   }
 
   crane(x, y, size) {
@@ -569,6 +641,16 @@ class Renderer {
     this.reflect(x, y, 97, night * 0.47, game.time);
     this.reflect(game.boat.x, game.boat.y, 36, 0.11 + night * 0.57, game.time);
     ctx.restore();
+    for (const id of game.harbor.projects) {
+      const { x, y } = HARBOR_HOMES[id];
+      this.glow(x, y + 5, 28, 0.27 + night * 0.36);
+      ctx.fillStyle = '#ffcc88';
+      ctx.fillRect(x - 10, y + 2, 5, 4);
+      ctx.fillRect(x + 5, y + 2, 5, 4);
+    }
+    if (game.harbor.tier >= 2 || game.harbor.projects.has('smith')) {
+      this.glow(177, 398, 27, 0.25 + 0.13 * Math.sin(game.time * 3.3));
+    }
     this.glow(x, y, 66 + night * 35, 0.29 + night * 0.46);
     if (night > 0.05) {
       const angle = game.time * 0.58;
