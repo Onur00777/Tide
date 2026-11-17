@@ -35,10 +35,11 @@ const DISTRICT_MAP = [
 ];
 
 const PHASES = [
-  { name: 'Yüksek su', seconds: 10, exposed: false },
-  { name: 'Su çekiliyor', seconds: 5, exposed: false },
-  { name: 'Sular çekildi', seconds: 86, exposed: true },
-  { name: 'Taşkın yaklaşıyor', seconds: 14, exposed: true },
+  { name: 'Yüksek Su', min: 10, max: 13 },
+  { name: 'Su Çekiliyor', min: 5, max: 7 },
+  { name: 'Sular Çekildi', min: 66, max: 94 },
+  { name: 'Dip Akıntısı Başladı - Tehlike Yakın', min: 12, max: 17 },
+  { name: 'Sular Basıyor!', min: 16, max: 21 },
 ];
 
 function distance(a, b) {
@@ -50,31 +51,35 @@ function clamp(value, min, max) {
 }
 
 class Tide {
-  constructor() {
+  constructor(random = Math.random) {
+    this.random = random;
     this.index = 0;
     this.elapsed = 0;
-    this.duration = PHASES.reduce((total, phase) => total + phase.seconds, 0);
+    this.duration = this.sampleDuration();
   }
 
   get phase() { return PHASES[this.index]; }
-  get remaining() { return this.phase.seconds - this.elapsed; }
-  get exposed() { return this.phase.exposed; }
-  get untilFlood() { return this.exposed ? this.remaining + (this.index === 2 ? PHASES[3].seconds : 0) : 0; }
-  get progress() {
-    const passed = PHASES.slice(0, this.index).reduce((total, phase) => total + phase.seconds, 0);
-    return (passed + this.elapsed) / this.duration;
-  }
+  get exposed() { return this.index >= 2; }
+  get warning() { return this.index === 3; }
+  get rising() { return this.index === 4; }
+  get surge() { return this.warning ? clamp((this.elapsed - 2) / 5, 0, 1) : Number(this.rising); }
 
   get water() {
-    const fraction = this.elapsed / this.phase.seconds;
-    return [1, 1 - fraction, 0, fraction][this.index];
+    const fraction = this.elapsed / this.duration;
+    return [1, 1 - fraction, 0, 0, fraction][this.index];
+  }
+
+  sampleDuration() {
+    const { min, max } = this.phase;
+    return min + this.random() * (max - min);
   }
 
   advance(seconds, onPhaseChange) {
     this.elapsed += seconds;
-    while (this.elapsed >= this.phase.seconds) {
-      this.elapsed -= this.phase.seconds;
+    while (this.elapsed >= this.duration) {
+      this.elapsed -= this.duration;
       this.index = (this.index + 1) % PHASES.length;
+      this.duration = this.sampleDuration();
       onPhaseChange(this.index);
     }
   }

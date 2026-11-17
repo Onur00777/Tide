@@ -27,7 +27,7 @@ class Keyboard {
 
 class Hud {
   constructor() {
-    const ids = ['game', 'phase', 'timer', 'tide-meter', 'tide-fill', 'mode', 'location', 'objective', 'return-time', 'cargo',
+    const ids = ['game', 'phase', 'mode', 'location', 'objective', 'return-time', 'cargo',
       'banner', 'banner-caption', 'banner-title', 'waypoint', 'waypoint-arrow', 'waypoint-name',
       'action', 'action-label', 'opening', 'opening-label', 'opening-meter', 'harbor', 'harbor-title', 'harbor-requirement',
       'upgrade', 'route', 'pause', 'pause-layer', 'resume', 'sound', 'collection', 'collection-open', 'collection-items'];
@@ -42,14 +42,9 @@ class Hud {
   draw(game, camera) {
     const { tide, harbor, paused } = game;
     const onFoot = game.mode === 'foot';
-    const seconds = Math.ceil(tide.exposed ? tide.untilFlood : tide.remaining);
-    const clock = Math.floor(seconds / 60) + ':' + String(seconds % 60).padStart(2, '0');
-    this.ui.game.dataset.threat = game.threat;
+    this.ui.game.dataset.tide = tide.rising ? 'rising' : tide.warning ? 'warning' : 'still';
+    this.ui.game.style.setProperty('--surge', tide.surge);
     this.text('phase', tide.phase.name);
-    this.text('timer', clock);
-    const percent = tide.progress * 100;
-    this.ui['tide-fill'].style.width = percent + '%';
-    this.ui['tide-meter'].setAttribute('aria-valuenow', String(Math.floor(percent)));
 
     this.text('mode', onFoot ? 'Yaya' : 'Teknede');
     this.text('location', game.atDock ? 'Başlangıç Limanı' : game.expedition.district.name);

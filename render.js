@@ -268,6 +268,11 @@ class Renderer {
       ctx.restore();
     }
     this.surf(district.coast, game.time, 1 - water * 0.9);
+    if (game.tide.warning) {
+      for (const tile of this.world.district.tiles) {
+        if (tile.type === TERRAIN.square) this.drawPuddle(tile, game.time, true);
+      }
+    }
     ctx.drawImage(this.harbor.canvas, 0, 0, VIEW.width, VIEW.height);
     this.surf(this.harbor.coast, game.time, 1);
     this.harborDetails(game.harbor, game.time);
@@ -291,6 +296,25 @@ class Renderer {
     if (target?.label === 'Batık kıyı') {
       this.ring(target.point.x, target.point.y, 15, '#8fedd7', game.time);
       this.glow(target.point.x, target.point.y, 22, 0.16);
+    }
+  }
+
+  drawPuddle({ x, y }, time, warning) {
+    const ctx = this.ctx;
+    const tremor = warning ? Math.sin(time * 33 + x) * 1.1 : 0;
+    ctx.fillStyle = '#326277a8';
+    ctx.beginPath();
+    ctx.ellipse(x + tremor, y, 11, 6, -0.15, 0, Math.PI * 2);
+    ctx.fill();
+    if (!warning) return;
+    ctx.strokeStyle = '#c1f1e2bc';
+    ctx.lineWidth = 0.8;
+    for (let i = 0; i < 4; i++) {
+      const bubble = (time * 2.1 + i / 4 + x / 37) % 1;
+      ctx.beginPath();
+      ctx.ellipse(x - 7 + i * 4 + tremor, y + (i % 2) * 3 - bubble * 4,
+        1 + bubble * 2, 0.7 + bubble, 0, 0, Math.PI * 2);
+      ctx.stroke();
     }
   }
 

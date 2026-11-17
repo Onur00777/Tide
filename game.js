@@ -100,8 +100,8 @@ class Game {
 
   get threat() {
     if (this.mode !== 'foot') return 'safe';
-    if (this.tide.index === 3 || this.tide.untilFlood <= this.returnTime + 2) return 'critical';
-    return this.tide.untilFlood <= this.returnTime + 11 ? 'warning' : 'safe';
+    if (this.tide.rising) return 'critical';
+    return this.tide.warning ? 'warning' : 'safe';
   }
 
   get target() {
@@ -181,7 +181,7 @@ class Game {
       this.signal('ebb', this.boat);
       this.announce('GÖZLERİNİ AÇ', 'Sular çekildi', 'ebb', 3.8);
     }
-    if (index === 3 && this.mode === 'foot') this.announce('KIYIYA DÖN', 'Su yükseliyor', 'danger', 3.3);
+    if (this.tide.rising && this.mode === 'foot') this.announce('KIYIYA DÖN', 'Su yükseliyor', 'danger', 3.3);
     if (index === 0) {
       this.expedition.end();
       if (this.mode === 'foot') {

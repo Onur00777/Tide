@@ -11,7 +11,7 @@ const CUES = {
 class GameAudio {
   constructor() {
     this.enabled = true;
-    this.nextBeat = 0;
+    this.nextSurge = 0;
   }
 
   unlock() {
@@ -52,14 +52,13 @@ class GameAudio {
   }
 
   update(game) {
-    if (game.paused || game.threat === 'safe') {
-      this.nextBeat = game.time;
+    if (game.paused || (!game.tide.warning && !game.tide.rising)) {
+      this.nextSurge = game.time;
       return;
     }
-    if (game.time < this.nextBeat) return;
-    const critical = game.threat === 'critical';
-    this.play([[74, 47, 0, 0.15, critical ? 0.28 : 0.19], [63, 45, 0.17, 0.12, 0.13]]);
-    this.nextBeat = game.time + (critical ? 0.66 : 1.2);
+    if (!game.tide.surge || game.time < this.nextSurge || !this.enabled || this.context?.state !== 'running') return;
+    this.play([[63, 36, 0, 2.3, 0.38], [86, 42, 0.3, 2.5, 0.24]]);
+    this.nextSurge = game.time + 4;
   }
 }
 
