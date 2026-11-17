@@ -30,7 +30,7 @@ class Hud {
   constructor() {
     const ids = ['game', 'phase', 'mode', 'location', 'objective', 'cargo', 'hull', 'hull-value', 'hull-meter', 'scrap', 'repair',
       'banner', 'banner-caption', 'banner-title', 'waypoint', 'waypoint-arrow', 'waypoint-name',
-      'action', 'action-label', 'opening', 'opening-label', 'opening-meter', 'harbor', 'harbor-title', 'harbor-requirement',
+      'interaction', 'harbor-action', 'action', 'action-label', 'opening', 'opening-label', 'opening-meter', 'harbor', 'harbor-title', 'harbor-requirement',
       'upgrade', 'crew-tabs', 'boat-upgrades', 'crew-upgrade', 'route', 'pause', 'pause-layer', 'resume', 'sound', 'collection', 'collection-open', 'collection-items'];
     this.ui = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
     this.harborTab = '';
@@ -62,6 +62,8 @@ class Hud {
 
     const action = game.interaction;
     const opening = game.expedition.hoist ?? game.expedition.opening;
+    const actionParent = this.ui[game.atDock ? 'harbor-action' : 'interaction'];
+    if (this.ui.action.parentElement !== actionParent) actionParent.append(this.ui.action);
     this.ui.action.hidden = paused || !action;
     this.text('action-label', action?.label ?? '');
     this.ui.opening.hidden = !opening || paused;

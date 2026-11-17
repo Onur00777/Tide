@@ -96,16 +96,20 @@ class HarborProgress {
 class ProgressSave {
   static key = 'gelgit.harbor.v2';
 
-  static load() {
+  static read(key) {
     try {
-      const current = JSON.parse(localStorage.getItem(this.key));
-      if (current && typeof current === 'object') return current;
-      const legacy = JSON.parse(localStorage.getItem('gelgit.harbor.v1'));
-      // Keep collected artifacts. Obsolete scrap totals did not buy the new structures.
-      return { relics: legacy?.relics };
+      const saved = JSON.parse(localStorage.getItem(key));
+      return saved && typeof saved === 'object' && !Array.isArray(saved) ? saved : null;
     } catch {
-      return {};
+      return null;
     }
+  }
+
+  static load() {
+    const current = this.read(this.key);
+    if (current) return current;
+    // Old scrap totals did not represent the current harbor economy.
+    return { relics: this.read('gelgit.harbor.v1')?.relics };
   }
 
   static write(harbor) {

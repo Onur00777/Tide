@@ -84,7 +84,8 @@ kbd { background: #122734; color: #eaf9f6; border: 1px solid #6e969d75; border-r
 .opening progress::-webkit-progress-value { background: var(--cyan); }
 .opening progress::-moz-progress-bar { background: var(--cyan); }
 
-.harbor { position: absolute; right: 28px; bottom: 27px; width: min(290px, 30vw); padding: 15px; border-radius: 12px; }
+.harbor { position: absolute; right: 28px; bottom: 27px; max-height: calc(100dvh - 100px); overflow-y: auto; width: min(290px, 30vw); padding: 15px; border-radius: 12px; }
+.harbor-action .action { width: 100%; min-width: 0; margin-top: 8px; white-space: normal; }
 .harbor-heading { display: flex; justify-content: space-between; align-items: center; margin-bottom: 7px; }
 .harbor-icon { color: var(--gold); font-size: 15px; }
 .boat-upgrades { display: grid; gap: 4px; margin-top: 7px; max-height: min(145px, 25dvh); overflow-y: auto; }
@@ -141,7 +142,7 @@ kbd { background: #122734; color: #eaf9f6; border: 1px solid #6e969d75; border-r
   .objective { font-size: 11px; }
   .controls { bottom: 9px; }
   .interaction { bottom: 180px; }
-  .harbor { bottom: 28px; width: 44vw; padding: 8px; }
+  .harbor { bottom: 28px; max-height: calc(100dvh - 145px); width: 44vw; padding: 8px; }
   .harbor h2 { font-size: 15px; }
   .harbor p { font-size: 10px; }
   .upgrade { min-height: 39px; font-size: 11px; }
