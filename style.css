@@ -59,6 +59,10 @@ button:focus-visible { outline: 2px solid var(--cyan); outline-offset: 4px; }
 .objective { display: flex; align-items: center; flex-wrap: wrap; gap: 7px 14px; color: #e5edeb; font-size: 14px; }
 .hull-status { display: flex; align-items: center; gap: 8px; margin-top: 9px; color: #d8c2a9; font-size: 11px; }
 .hull-status meter { width: 65px; height: 8px; }
+.repair-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; color: #d8c2a9; font-size: 11px; pointer-events: auto; }
+.repair-tools:not(:empty) > :not(:empty):not([hidden]) { margin-top: 5px; }
+.repair-tools button { border-radius: 5px; padding: 6px 8px; font-size: 11px; }
+.repair-tools button:disabled { opacity: .55; cursor: default; }
 .cargo { display: flex; gap: 5px; margin-top: 12px; min-height: 28px; }
 .cargo-slot { width: 27px; height: 27px; display: grid; place-items: center; border: 1px solid #84c2c44a; border-radius: 5px; color: var(--muted); background: #0b1a26be; }
 .cargo-slot[data-filled] { color: var(--item-color); border-color: var(--item-color); }

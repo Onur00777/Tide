@@ -3,7 +3,7 @@
 const MOVEMENT = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight']);
 
 class Keyboard {
-  constructor(onInteract, onPause, modal) {
+  constructor(onInteract, onPause, onRepair, modal) {
     this.keys = new Set();
     window.addEventListener('keydown', event => {
       if (modal.open || event.ctrlKey || event.altKey || event.metaKey) return;
@@ -13,6 +13,7 @@ class Keyboard {
       }
       if (event.repeat) return;
       if (event.code === 'KeyE') onInteract();
+      if (event.code === 'KeyR') onRepair();
       if (event.code === 'Escape') onPause();
     });
     window.addEventListener('keyup', event => this.keys.delete(event.code));
@@ -27,7 +28,7 @@ class Keyboard {
 
 class Hud {
   constructor() {
-    const ids = ['game', 'phase', 'mode', 'location', 'objective', 'cargo', 'hull', 'hull-value', 'hull-meter',
+    const ids = ['game', 'phase', 'mode', 'location', 'objective', 'cargo', 'hull', 'hull-value', 'hull-meter', 'scrap', 'repair',
       'banner', 'banner-caption', 'banner-title', 'waypoint', 'waypoint-arrow', 'waypoint-name',
       'action', 'action-label', 'opening', 'opening-label', 'opening-meter', 'harbor', 'harbor-title', 'harbor-requirement',
       'upgrade', 'crew-tabs', 'crew-upgrade', 'route', 'pause', 'pause-layer', 'resume', 'sound', 'collection', 'collection-open', 'collection-items'];
@@ -51,6 +52,10 @@ class Hud {
     this.text('location', game.atDock ? 'Başlangıç Limanı' : game.expedition.district.name);
     this.text('objective', game.objective);
     this.drawCargo(game.cargo, harbor.capacity);
+    this.text('scrap', harbor.scrap ? 'Hurda ×' + harbor.scrap : '');
+    this.ui.repair.hidden = onFoot || paused || game.boat.hull === 100;
+    this.ui.repair.disabled = !game.canRepair;
+    this.text('repair', game.atDock ? 'R · Ücretsiz tamir' : 'R · Tamir (' + game.repairCost + ' hurda)');
     this.ui.hull.hidden = onFoot;
     this.ui['hull-meter'].value = game.boat.hull;
     this.text('hull-value', 'Gövde %' + game.boat.hull + (game.boat.flood > 0.07 ? ' · Su alıyor' : ''));
@@ -182,10 +187,11 @@ function togglePause() {
   keyboard.clear();
 }
 
-const keyboard = new Keyboard(() => game.interact(), togglePause, collection);
+const keyboard = new Keyboard(() => game.interact(), togglePause, () => game.repair(), collection);
 hud.ui.pause.addEventListener('click', togglePause);
 hud.ui.resume.addEventListener('click', togglePause);
 hud.ui.action.addEventListener('click', () => game.interact());
+hud.ui.repair.addEventListener('click', () => game.repair());
 hud.ui.upgrade.addEventListener('click', () => game.upgrade());
 hud.ui['crew-tabs'].addEventListener('click', event => {
   if (event.target.matches('button[data-project]')) hud.harborTab = event.target.dataset.project;

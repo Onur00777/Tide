@@ -153,13 +153,14 @@ class Game {
     const { site } = opening;
     site.opened = true;
     this.expedition.opening = null;
-    if (this.harbor.relics.has(site.item.id) || this.cargo.includes(site.item)) {
-      this.announce('KAYITLI ESER', site.item.name, 'find', 2.4);
-      return;
-    }
-    this.cargo.push(site.item);
-    this.signal('relic', this.walker);
-    this.announce(site.item.kind.toLocaleUpperCase('tr-TR'), site.item.name, 'find', 3);
+    this.collect(site.item, this.walker);
+  }
+
+  collect(item, point) {
+    const known = this.harbor.relics.has(item.id) || this.cargo.includes(item);
+    this.cargo.push(known ? SCRAP_CRATE : item);
+    this.signal('relic', point);
+    this.announce(known ? 'HURDA' : item.kind.toLocaleUpperCase('tr-TR'), known ? SCRAP_CRATE.name : item.name, 'find', 3);
   }
 
   onPhaseChange(index) {
@@ -212,6 +213,30 @@ class Game {
     }
     if (action.type === 'open') this.expedition.opening = { site: action.site, elapsed: 0 };
     if (action.type === 'archive') this.archive();
+  }
+
+  get repairCost() { return this.atDock ? 0 : SCRAP_CRATE.scrap; }
+  get canRepair() {
+    return !this.paused && this.mode === 'boat' && this.boat.hull < 100
+      && (this.harbor.scrap >= this.repairCost || this.cargo.includes(SCRAP_CRATE));
+  }
+
+  repair() {
+    if (!this.canRepair) return;
+    const cost = this.repairCost;
+    if (cost) {
+      const crate = this.cargo.indexOf(SCRAP_CRATE);
+      if (crate !== -1) this.cargo.splice(crate, 1);
+      else this.harbor.scrap -= cost;
+    } else {
+      this.boat.stop();
+    }
+    this.boat.hull = cost ? Math.min(100, this.boat.hull + 34) : 100;
+    this.boat.flood = 0;
+    this.harbor.hull = this.boat.hull;
+    this.persist(this.harbor);
+    this.signal('delivery', this.boat);
+    this.announce('TAMİR', cost ? 'Gövde yamalandı' : 'Gövde tamamen onarıldı', 'find', 2.8);
   }
 
   archive() {

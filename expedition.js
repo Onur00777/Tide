@@ -15,6 +15,8 @@ const RELICS = Object.fromEntries([
   ['rotor', 'Fenerin İlk Rotoru', 'Mekanik', '⚙', '#ff9d6d'],
 ].map(([id, name, kind, icon, color]) => [id, { id, name, kind, icon, color }]));
 
+const SCRAP_CRATE = { id: 'scrap', name: 'Hurda Kasası', icon: '▦', color: '#bbad93', scrap: 2 };
+
 const DISTRICTS = [
   { name: 'Fener Sokağı', finds: ['journal', 'signal', 'ledger', 'spring'], map: DISTRICT_MAP },
   {

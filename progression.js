@@ -21,6 +21,7 @@ class HarborProgress {
     this.crew = new Set(crew.filter(id => typeof id === 'string' && Object.hasOwn(CREW, id)));
     const projects = Array.isArray(saved.projects) ? saved.projects : [];
     this.projects = new Set(projects.filter(id => this.crew.has(id)));
+    this.scrap = Number.isSafeInteger(saved.scrap) ? clamp(saved.scrap, 0, 9999) : 0;
     this.hull = Number.isFinite(saved.hull) ? clamp(Math.round(saved.hull), 0, 100) : 100;
   }
 
@@ -40,8 +41,13 @@ class HarborProgress {
   get beam() { return this.built.reduce((radius, goal) => radius + (goal.beam ?? 0), this.projects.has('diver') ? 226 : 197); }
 
   archive(cargo) {
-    for (const item of cargo) this.relics.add(item.id);
+    for (const item of cargo) {
+      this.addScrap(item.scrap ?? 1);
+      if (!item.scrap) this.relics.add(item.id);
+    }
   }
+
+  addScrap(amount) { this.scrap = Math.min(9999, this.scrap + amount); }
 
   upgrade() {
     if (!this.ready) return null;
@@ -55,7 +61,7 @@ class HarborProgress {
   }
 
   snapshot() {
-    return { tier: this.tier, relics: [...this.relics], crew: [...this.crew], projects: [...this.projects], hull: this.hull };
+    return { tier: this.tier, relics: [...this.relics], crew: [...this.crew], projects: [...this.projects], hull: this.hull, scrap: this.scrap };
   }
 }
 
