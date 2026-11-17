@@ -225,9 +225,22 @@ hud.ui.route.addEventListener('click', () => game.switchRoute());
 
 window.addEventListener('pointerdown', () => feedback.audio.unlock());
 window.addEventListener('keydown', () => feedback.audio.unlock());
+function drawSoundLevel() {
+  const labels = { on: 'Ses', quiet: 'Kısık', off: 'Sessiz' };
+  const { level } = feedback.audio;
+  hud.ui.sound.textContent = labels[level];
+  hud.ui.sound.title = labels[level];
+  hud.ui.sound.setAttribute('aria-pressed', level === 'quiet' ? 'mixed' : String(level === 'on'));
+}
+
+drawSoundLevel();
 hud.ui.sound.addEventListener('click', () => {
-  feedback.audio.toggle();
-  hud.ui.sound.setAttribute('aria-pressed', String(feedback.audio.enabled));
+  feedback.audio.cycleLevel();
+  drawSoundLevel();
+});
+document.addEventListener('visibilitychange', () => {
+  keyboard.clear();
+  feedback.audio.setVisible(!document.hidden);
 });
 
 let pausedBeforeCollection = false;
