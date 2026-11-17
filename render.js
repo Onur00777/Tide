@@ -43,6 +43,10 @@ class Renderer {
     this.refreshHarbor();
     const ctx = this.ctx;
     this.sea = this.paintSea();
+    this.darkness = document.createElement('canvas');
+    this.darkness.width = VIEW.width;
+    this.darkness.height = VIEW.height;
+    this.darkCtx = this.darkness.getContext('2d');
     this.vignette = ctx.createRadialGradient(550, 286, 125, 550, 286, 635);
     this.vignette.addColorStop(0, '#04142100');
     this.vignette.addColorStop(1, '#041421a8');
@@ -301,13 +305,64 @@ class Renderer {
       if (game.rescue.stranded) this.drawDistress(game.rescue.stranded, game.time);
     }
     const anchored = game.mode === 'foot';
-    this.drawBoat(game.boat, game.time, anchored, night, waterMask, anchored ? [] : game.cargo, game.rescue.passenger);
+    this.drawBoat(game.boat, game.time, anchored, waterMask, anchored ? [] : game.cargo, game.rescue.passenger, game.harbor.lanternRange);
     if (anchored) this.drawWalker(game.walker, game.time, game.rescue.carrying);
+    this.drawDarkness(game);
     const target = game.target;
     if (target?.label === 'Batık kıyı') {
       this.ring(target.point.x, target.point.y, 15, '#8fedd7', game.time);
       this.glow(target.point.x, target.point.y, 22, 0.16);
     }
+  }
+
+  drawDarkness(game) {
+    const ctx = this.darkCtx;
+    const beacon = this.world.lighthouse;
+    const { boat, walker, harbor } = game;
+    ctx.clearRect(0, 0, VIEW.width, VIEW.height);
+    ctx.fillStyle = 'rgba(0, 5, 13, 0.965)';
+    ctx.fillRect(0, 0, VIEW.width, VIEW.height);
+    ctx.globalCompositeOperation = 'destination-out';
+    this.reveal(ctx, beacon, 108);
+    this.lightCone(ctx, beacon, game.time * 0.58, harbor.beam, 0.27, '#fff');
+    this.reveal(ctx, boat, 31);
+    if (harbor.lanternRange) this.lightCone(ctx, this.bow(boat), boat.heading, harbor.lanternRange, 0.48, '#fff');
+
+    // Preserve reading distance for footing, foam and rescue signals on land.
+    if (game.mode === 'foot') {
+      this.reveal(ctx, walker, 112);
+      const stranded = game.rescue.stranded;
+      if (stranded && distance(walker, stranded) < 145) this.reveal(ctx, stranded, 21);
+    }
+    for (const id of harbor.projects) this.reveal(ctx, HARBOR_HOMES[id], 31);
+    for (const building of harbor.structures) this.reveal(ctx, building, building.sprite === 'lamp' ? 48 : 37);
+    ctx.globalCompositeOperation = 'source-over';
+    this.ctx.drawImage(this.darkness, 0, 0);
+  }
+
+  reveal(ctx, { x, y }, radius) {
+    const light = ctx.createRadialGradient(x, y, radius * 0.34, x, y, radius);
+    light.addColorStop(0, '#fff');
+    light.addColorStop(1, '#fff0');
+    ctx.fillStyle = light;
+    ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+  }
+
+  lightCone(ctx, { x, y }, heading, range, spread, color) {
+    const light = ctx.createRadialGradient(x, y, 0, x, y, range);
+    light.addColorStop(0, color);
+    light.addColorStop(0.6, color === '#fff' ? '#ffff' : '#ffd48c32');
+    light.addColorStop(1, '#ffd48c00');
+    ctx.fillStyle = light;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.arc(x, y, range, heading - spread, heading + spread);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  bow(boat) {
+    return { x: boat.x + Math.cos(boat.heading) * 11, y: boat.y + Math.sin(boat.heading) * 11 };
   }
 
   drawCrewMember(x, y, color) {
@@ -639,7 +694,9 @@ class Renderer {
     ctx.save();
     ctx.clip(waterMask, 'evenodd');
     this.reflect(x, y, 97, night * 0.47, game.time);
-    this.reflect(game.boat.x, game.boat.y, 36, 0.11 + night * 0.57, game.time);
+    const range = game.harbor.lanternRange;
+    const bow = this.bow(game.boat);
+    if (range) this.reflect(bow.x, bow.y, 33, 0.34, game.time);
     ctx.restore();
     for (const id of game.harbor.projects) {
       const { x, y } = HARBOR_HOMES[id];
@@ -667,7 +724,7 @@ class Renderer {
       }
     }
     this.disc(x, y, 5, '#fff1bc');
-    this.glow(game.boat.x, game.boat.y, 40 + night * 27, 0.2 + night * 0.58);
+    if (range) this.lightCone(ctx, bow, game.boat.heading, range, 0.48, '#ffd48c64');
     for (const building of game.harbor.built) {
       const radius = building.sprite === 'lamp' ? 53 : 32;
       this.glow(building.x, building.y, radius, 0.22 + night * 0.47);
@@ -696,7 +753,7 @@ class Renderer {
     this.disc(x, y, 2, '#fff0b2');
   }
 
-  drawBoat(boat, time, anchored, night, waterMask, cargo, passenger) {
+  drawBoat(boat, time, anchored, waterMask, cargo, passenger, lantern) {
     const ctx = this.ctx;
     const speed = clamp(boat.currentSpeed / 210, 0, 1);
     const roll = Math.sin(time * 2.8 + boat.x * 0.014 + boat.y * 0.023);
@@ -764,8 +821,10 @@ class Renderer {
     ctx.fillRect(-14.5, -2.6, 4, 5.2);
     ctx.fillStyle = '#8daca6';
     ctx.fillRect(-14, -2.4, 0.9, 3.7);
-    this.disc(7, 0, 2.7, '#5c4033');
-    this.disc(7, 0, 1.4 + night * 0.45, '#fff0bc');
+    if (lantern) {
+      this.disc(10, 0, 2.7, '#5c4033');
+      this.disc(10, 0, 1.8, '#fff0bc');
+    }
     if (passenger) {
       ctx.save();
       ctx.translate(2, -2);

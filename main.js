@@ -31,7 +31,7 @@ class Hud {
     const ids = ['game', 'phase', 'mode', 'location', 'objective', 'cargo', 'hull', 'hull-value', 'hull-meter', 'scrap', 'repair',
       'banner', 'banner-caption', 'banner-title', 'waypoint', 'waypoint-arrow', 'waypoint-name',
       'action', 'action-label', 'opening', 'opening-label', 'opening-meter', 'harbor', 'harbor-title', 'harbor-requirement',
-      'upgrade', 'crew-tabs', 'crew-upgrade', 'route', 'pause', 'pause-layer', 'resume', 'sound', 'collection', 'collection-open', 'collection-items'];
+      'upgrade', 'crew-tabs', 'boat-upgrades', 'crew-upgrade', 'route', 'pause', 'pause-layer', 'resume', 'sound', 'collection', 'collection-open', 'collection-items'];
     this.ui = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
     this.harborTab = '';
   }
@@ -110,11 +110,32 @@ class Hud {
     this.text('harbor-title', project?.title ?? goal?.title ?? 'Liman tamamlandı');
     this.text('harbor-requirement', project ? (complete ? 'İnşa tamamlandı' : project.detail)
       : (harbor.ready ? 'Geliştirme hazır' : goal?.relic.name ?? ''));
+    this.drawBoatUpgrades(harbor);
     this.ui['crew-upgrade'].hidden = !project || complete;
     this.ui.upgrade.disabled = !harbor.ready;
     this.ui.upgrade.hidden = Boolean(project) || !goal;
     this.ui.route.hidden = Boolean(project) || !harbor.tier;
     this.text('route', 'Rota · ' + district.name + '  ↻');
+  }
+
+  drawBoatUpgrades(harbor) {
+    const list = this.ui['boat-upgrades'];
+    const options = Object.entries(BOAT_UPGRADES).filter(([, upgrade]) => upgrade.crew === this.harborTab);
+    list.hidden = !options.length;
+    const key = [this.harborTab, harbor.scrap, ...harbor.fittings].join(':');
+    if (this.upgradeKey === key) return;
+    this.upgradeKey = key;
+    list.replaceChildren(...options.map(([id, upgrade]) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.dataset.fitting = id;
+      button.disabled = !harbor.canFit(id);
+      const status = harbor.fittings.has(id) ? 'Takılı'
+        : upgrade.requires && !harbor.fittings.has(upgrade.requires) ? BOAT_UPGRADES[upgrade.requires].name + ' gerekli'
+        : upgrade.cost + ' hurda';
+      button.textContent = upgrade.name + ' · ' + status;
+      return button;
+    }));
   }
 
   drawCargo(items, capacity) {
@@ -197,6 +218,9 @@ hud.ui['crew-tabs'].addEventListener('click', event => {
   if (event.target.matches('button[data-project]')) hud.harborTab = event.target.dataset.project;
 });
 hud.ui['crew-upgrade'].addEventListener('click', () => game.buildCrewProject(hud.harborTab));
+hud.ui['boat-upgrades'].addEventListener('click', event => {
+  if (event.target.matches('button[data-fitting]')) game.fitBoat(event.target.dataset.fitting);
+});
 hud.ui.route.addEventListener('click', () => game.switchRoute());
 
 window.addEventListener('pointerdown', () => feedback.audio.unlock());

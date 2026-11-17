@@ -275,6 +275,16 @@ class Game {
     this.announce('LİMAN BÜYÜDÜ', project.title, 'upgrade', 4);
   }
 
+  fitBoat(id) {
+    if (this.paused || !this.atDock) return;
+    const upgrade = this.harbor.fit(id);
+    if (!upgrade) return;
+    this.boat.stop();
+    this.persist(this.harbor);
+    this.signal('upgrade', this.boat);
+    this.announce('TEKNE GÜÇLENDİ', upgrade.name, 'upgrade', 3);
+  }
+
   switchRoute() {
     if (this.paused || !this.atDock) return;
     this.route = (this.route + 1) % (Math.min(this.harbor.tier, DISTRICTS.length - 1) + 1);

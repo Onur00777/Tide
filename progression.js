@@ -12,6 +12,11 @@ const CREW_PROJECTS = {
   shipwright: { title: 'Tersane İskelesi', detail: 'Yeni iskele, vinç ve daha hızlı tekne', x: 324, y: 308, sprite: 'crane' },
 };
 
+const BOAT_UPGRADES = {
+  lantern: { crew: 'smith', name: 'Pruva Feneri', cost: 3 },
+  lens: { crew: 'smith', name: 'Uzak Menzil Merceği', cost: 4, requires: 'lantern' },
+};
+
 class HarborProgress {
   constructor(saved = {}) {
     const ids = Array.isArray(saved.relics) ? saved.relics : [];
@@ -22,6 +27,10 @@ class HarborProgress {
     const projects = Array.isArray(saved.projects) ? saved.projects : [];
     this.projects = new Set(projects.filter(id => this.crew.has(id)));
     this.scrap = Number.isSafeInteger(saved.scrap) ? clamp(saved.scrap, 0, 9999) : 0;
+    const fittings = Array.isArray(saved.fittings) ? saved.fittings : [];
+    this.fittings = new Set(Object.keys(BOAT_UPGRADES).filter(id =>
+      fittings.includes(id) && this.crew.has(BOAT_UPGRADES[id].crew)
+      && (!BOAT_UPGRADES[id].requires || fittings.includes(BOAT_UPGRADES[id].requires))));
     this.hull = Number.isFinite(saved.hull) ? clamp(Math.round(saved.hull), 0, 100) : 100;
   }
 
@@ -47,6 +56,22 @@ class HarborProgress {
     }
   }
 
+  get lanternRange() { return this.fittings.has('lens') ? 235 : this.fittings.has('lantern') ? 138 : 0; }
+
+  canFit(id) {
+    const upgrade = Object.hasOwn(BOAT_UPGRADES, id) && BOAT_UPGRADES[id];
+    return Boolean(upgrade && this.crew.has(upgrade.crew) && !this.fittings.has(id)
+      && (!upgrade.requires || this.fittings.has(upgrade.requires)) && this.scrap >= upgrade.cost);
+  }
+
+  fit(id) {
+    if (!this.canFit(id)) return null;
+    const upgrade = BOAT_UPGRADES[id];
+    this.scrap -= upgrade.cost;
+    this.fittings.add(id);
+    return upgrade;
+  }
+
   addScrap(amount) { this.scrap = Math.min(9999, this.scrap + amount); }
 
   upgrade() {
@@ -61,7 +86,7 @@ class HarborProgress {
   }
 
   snapshot() {
-    return { tier: this.tier, relics: [...this.relics], crew: [...this.crew], projects: [...this.projects], hull: this.hull, scrap: this.scrap };
+    return { tier: this.tier, relics: [...this.relics], crew: [...this.crew], projects: [...this.projects], hull: this.hull, scrap: this.scrap, fittings: [...this.fittings] };
   }
 }
 
