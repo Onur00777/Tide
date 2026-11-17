@@ -305,9 +305,21 @@ class Renderer {
       if (game.rescue.stranded) this.drawDistress(game.rescue.stranded, game.time);
     }
     const anchored = game.mode === 'foot';
-    this.drawBoat(game.boat, game.time, anchored, waterMask, anchored ? [] : game.cargo, game.rescue.passenger, game.harbor.lanternRange);
+    this.drawBoat(game.boat, game.time, anchored, waterMask, anchored ? [] : game.cargo, game.rescue.passenger, game.harbor.lanternRange, game.harbor.fittings.has('crane'));
     if (anchored) this.drawWalker(game.walker, game.time, game.rescue.carrying);
+    const deep = game.deepTarget;
+    if (!anchored && deep && distance(game.boat, deep) < 125) this.ring(deep.x, deep.y, 11, '#a5dedc', game.time);
+    if (game.expedition.hoist) {
+      const { site } = game.expedition.hoist;
+      ctx.strokeStyle = '#e6be7b';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(game.boat.x, game.boat.y);
+      ctx.lineTo(site.x, site.y);
+      ctx.stroke();
+    }
     this.drawDarkness(game);
+    if (!anchored && deep && distance(game.boat, deep) < 125) this.ring(deep.x, deep.y, 7, '#72a4ae', game.time);
     const target = game.target;
     if (target?.label === 'Batık kıyı') {
       this.ring(target.point.x, target.point.y, 15, '#8fedd7', game.time);
@@ -753,7 +765,7 @@ class Renderer {
     this.disc(x, y, 2, '#fff0b2');
   }
 
-  drawBoat(boat, time, anchored, waterMask, cargo, passenger, lantern) {
+  drawBoat(boat, time, anchored, waterMask, cargo, passenger, lantern, crane) {
     const ctx = this.ctx;
     const speed = clamp(boat.currentSpeed / 210, 0, 1);
     const roll = Math.sin(time * 2.8 + boat.x * 0.014 + boat.y * 0.023);
@@ -815,8 +827,15 @@ class Renderer {
     }
     ctx.restore();
     ctx.strokeStyle = '#e4c69b';
-    ctx.lineWidth = 1.55;
+    ctx.lineWidth = boat.armor ? 2.5 : 1.55;
+    if (boat.armor) ctx.strokeStyle = '#a9b6bb';
     ctx.stroke(hull);
+    if (crane) {
+      ctx.fillStyle = '#6d4b33';
+      ctx.fillRect(2, -5, 4, 10);
+      ctx.fillStyle = '#f0ba69';
+      ctx.fillRect(3, 2, 8, 1.5);
+    }
     ctx.fillStyle = '#263638';
     ctx.fillRect(-14.5, -2.6, 4, 5.2);
     ctx.fillStyle = '#8daca6';

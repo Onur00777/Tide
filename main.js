@@ -61,12 +61,12 @@ class Hud {
     this.text('hull-value', 'Gövde %' + game.boat.hull + (game.boat.flood > 0.07 ? ' · Su alıyor' : ''));
 
     const action = game.interaction;
-    const opening = game.expedition.opening;
+    const opening = game.expedition.hoist ?? game.expedition.opening;
     this.ui.action.hidden = paused || !action;
     this.text('action-label', action?.label ?? '');
     this.ui.opening.hidden = !opening || paused;
     if (opening) {
-      this.text('opening-label', 'Kasa açılıyor · ' + Math.ceil(opening.site.seconds - opening.elapsed) + ' sn');
+      this.text('opening-label', (game.expedition.hoist ? 'Vinç çekiyor · ' : 'Kasa açılıyor · ') + Math.ceil(opening.site.seconds - opening.elapsed) + ' sn');
       this.ui['opening-meter'].value = opening.elapsed / opening.site.seconds;
     }
 
@@ -139,7 +139,7 @@ class Hud {
   }
 
   drawCargo(items, capacity) {
-    const key = capacity + ':' + items.map(item => item.id).join(',');
+    const key = capacity + ':' + items.map(item => item.id + (item.scrap ?? '')).join(',');
     if (key === this.cargoKey) return;
     this.cargoKey = key;
     const slots = Array.from({ length: capacity }, (_, index) => {
@@ -147,7 +147,7 @@ class Hud {
       slot.className = 'cargo-slot';
       const item = items[index];
       slot.textContent = item?.icon ?? '·';
-      slot.title = item?.name ?? 'Boş yük yuvası';
+      slot.title = item?.scrap ? item.name + ' · ' + item.scrap + ' hurda' : item?.name ?? 'Boş yük yuvası';
       if (item) {
         slot.dataset.filled = '';
         slot.style.setProperty('--item-color', item.color);

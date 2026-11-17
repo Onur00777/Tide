@@ -17,6 +17,8 @@ const RELICS = Object.fromEntries([
 
 const SCRAP_CRATE = { id: 'scrap', name: 'Hurda Kasası', icon: '▦', color: '#bbad93', scrap: 2 };
 
+const DEEP_CRATE = { id: 'deep-scrap', name: 'Ağır Hurda Kasası', icon: '▦', color: '#bad2ce', scrap: 4, weight: 1.45 };
+
 const DISTRICTS = [
   { name: 'Fener Sokağı', finds: ['journal', 'signal', 'ledger', 'spring'], map: DISTRICT_MAP },
   {
@@ -73,6 +75,8 @@ class Expedition {
     this.district = DISTRICTS[0];
     this.sites = [];
     this.opening = null;
+    this.hoist = null;
+    this.deepSite = null;
   }
 
   begin(district, owned, cargo) {
@@ -80,6 +84,7 @@ class Expedition {
     this.district = district;
     this.opening = null;
     this.world.rollHazards();
+    this.rollDeepSite();
     const patch = this.world.district;
     const candidates = shuffle(patch.tiles.filter(tile =>
       (tile.type === TERRAIN.rubble || tile.type === TERRAIN.door) && tile.col >= 4 && tile.col <= 16
@@ -99,6 +104,17 @@ class Expedition {
     const documented = shuffle(finds.filter(item => !uncollected.includes(item)));
     const rewards = [...uncollected, ...documented];
     this.sites = spots.map((tile, index) => ({ ...tile, ...VAULTS[index], item: rewards[index], opened: false }));
+  }
+
+  rollDeepSite() {
+    const choices = this.world.shore.filter(tile => tile.col <= 9 && DIRECTIONS.some(([dx, dy]) => {
+      const x = tile.x + dx * VIEW.tile;
+      const y = tile.y + dy * VIEW.tile;
+      return this.world.canOccupy(x, y, 11, 'boat', true);
+    }));
+    const tile = choices[Math.floor(Math.random() * choices.length)];
+    this.deepSite = tile ? { ...tile, seconds: 5, opened: false } : null;
+    this.hoist = null;
   }
 
   end() {

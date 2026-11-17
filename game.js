@@ -37,8 +37,9 @@ class Game {
     this.route = Math.min(this.harbor.tier, DISTRICTS.length - 1);
     this.expedition.district = this.nextDistrict;
     if (this.route) this.world.setDistrict(this.nextDistrict.map);
+    this.expedition.rollDeepSite();
     this.boat = new Boat(411, 348, this.harbor.hull);
-    this.boat.speed = this.harbor.boatSpeed;
+    this.configureBoat();
     this.walker = new Actor(0, 0, 6, 81);
     this.mode = 'boat';
     this.cargo = [];
@@ -46,6 +47,17 @@ class Game {
     this.cues = [];
     this.time = 0;
     this.paused = false;
+  }
+
+  configureBoat() {
+    this.boat.speed = this.harbor.boatSpeed;
+    this.boat.engine = Number(this.harbor.fittings.has('engine'));
+    this.boat.armor = this.harbor.fittings.has('armor');
+  }
+
+  get deepTarget() {
+    const site = this.expedition.deepSite;
+    return this.harbor.fittings.has('crane') && this.tide.water >= 0.55 && !site?.opened ? site : null;
   }
 
   get nextDistrict() { return DISTRICTS[this.route]; }
@@ -68,6 +80,7 @@ class Game {
       return site ? { point: site, label: 'Kasa', kind: 'vault' } : { point: this.boat, label: 'Tekne', kind: 'home' };
     }
     if (this.rescue.passenger || this.cargo.length || this.harbor.ready) return { point: this.world.dock, label: 'Liman', kind: 'home' };
+    if (this.deepTarget && !this.full) return { point: this.deepTarget, label: 'Batık ağır kasa', kind: 'vault' };
     if (!this.atDock || this.tide.exposed) return { point: { x: 546, y: 316 }, label: 'Batık kıyı', kind: 'vault' };
     return null;
   }
@@ -83,6 +96,7 @@ class Game {
     if (this.rescue.passenger) return `${this.rescue.passenger.name} ile limana dön`;
     if (this.cargo.length) return 'Limanın ışığını izle';
     if (this.harbor.ready) return this.atDock ? 'Yükseltme hazır' : 'Limanın ışığını izle';
+    if (this.deepTarget && !this.full) return 'Vinçle ağır kasayı çıkar';
     return this.tide.exposed ? 'Kıyıya yanaş' : 'Çekilmeyi bekle';
   }
 
@@ -102,6 +116,11 @@ class Game {
       return site ? { type: 'open', label: `${site.label} · ${site.seconds} sn`, site } : null;
     }
     if (this.atDock && this.cargo.length) return { type: 'archive', label: 'Buluntuları indir' };
+    const deep = this.deepTarget;
+    if (this.expedition.hoist) return null;
+    if (!this.full && deep && distance(this.boat, deep) < 46 && this.boat.currentSpeed < 24) {
+      return { type: 'hoist', label: 'Ağır kasayı vinçle çek' };
+    }
     const landing = this.tide.exposed && !this.tide.rising && this.world.landingNear(this.boat);
     return landing ? { type: 'land', label: 'Karaya çık', landing } : null;
   }
@@ -117,8 +136,11 @@ class Game {
     if (onFoot) {
       actor.move(dx, dy, seconds * this.world.walkingFactor(start, this.tide.water), canMove);
     } else {
-      this.boat.load = (this.cargo.length + Number(Boolean(this.rescue.passenger)) * 0.55) / this.harbor.capacity;
-      this.boat.move(dx, dy, seconds, this.world.currentAt(this.boat, this.tide), canMove, damage => this.onImpact(damage));
+      const weight = this.cargo.reduce((total, item) => total + (item.weight ?? 1), 0);
+      this.boat.load = clamp((weight + (this.rescue.passenger ? 0.55 : 0)) / this.harbor.capacity, 0, 1);
+      this.hoistCrate(seconds, Boolean(dx || dy));
+      const current = this.expedition.hoist ? { x: 0, y: 0 } : this.world.currentAt(this.boat, this.tide);
+      this.boat.move(dx, dy, seconds, current, canMove, damage => this.onImpact(damage));
     }
     if (onFoot) {
       const end = this.world.district.tileAt(actor.x, actor.y);
@@ -132,6 +154,22 @@ class Game {
       this.signal('delivery', this.world.dock);
       this.announce('MÜRETTEBAT GÜVENDE', `${member.name} limana yerleşti`, 'find', 4);
     }
+  }
+
+  hoistCrate(seconds, steering) {
+    const lift = this.expedition.hoist;
+    if (!lift) return;
+    if (steering || lift.site !== this.deepTarget || this.full || distance(this.boat, lift.site) >= 46) {
+      this.expedition.hoist = null;
+      return;
+    }
+    lift.elapsed += seconds;
+    if (lift.elapsed < lift.site.seconds) return;
+    this.expedition.hoist = null;
+    lift.site.opened = true;
+    this.cargo.push(DEEP_CRATE);
+    this.signal('relic', this.boat);
+    this.announce('VİNÇ', DEEP_CRATE.name, 'find', 3);
   }
 
   onImpact(damage) {
@@ -212,22 +250,31 @@ class Game {
       this.world.markEscapeRoute(action.landing);
     }
     if (action.type === 'open') this.expedition.opening = { site: action.site, elapsed: 0 };
+    if (action.type === 'hoist') {
+      this.boat.stop();
+      this.expedition.hoist = { site: this.deepTarget, elapsed: 0 };
+    }
     if (action.type === 'archive') this.archive();
   }
 
   get repairCost() { return this.atDock ? 0 : SCRAP_CRATE.scrap; }
   get canRepair() {
     return !this.paused && this.mode === 'boat' && this.boat.hull < 100
-      && (this.harbor.scrap >= this.repairCost || this.cargo.includes(SCRAP_CRATE));
+      && (this.harbor.scrap + this.cargo.reduce((sum, item) => sum + (item.scrap ?? 0), 0) >= this.repairCost);
   }
 
   repair() {
     if (!this.canRepair) return;
     const cost = this.repairCost;
     if (cost) {
-      const crate = this.cargo.indexOf(SCRAP_CRATE);
-      if (crate !== -1) this.cargo.splice(crate, 1);
-      else this.harbor.scrap -= cost;
+      const crate = this.cargo.findIndex(item => item.scrap);
+      if (crate !== -1) {
+        const item = this.cargo[crate];
+        if (item.scrap > cost) this.cargo[crate] = { ...item, scrap: item.scrap - cost };
+        else this.cargo.splice(crate, 1);
+      } else {
+        this.harbor.scrap -= cost;
+      }
     } else {
       this.boat.stop();
     }
@@ -253,7 +300,7 @@ class Game {
     const goal = this.harbor.upgrade();
     if (!goal) return;
     this.boat.stop();
-    this.boat.speed = this.harbor.boatSpeed;
+    this.configureBoat();
     this.route = Math.min(this.harbor.tier, DISTRICTS.length - 1);
     this.persist(this.harbor);
     this.signal('upgrade', goal);
@@ -265,7 +312,7 @@ class Game {
     const project = this.harbor.buildProject(id);
     if (!project) return;
     this.boat.stop();
-    this.boat.speed = this.harbor.boatSpeed;
+    this.configureBoat();
     this.world.setHarborExpanded(this.harbor.projects.has('shipwright'));
     if (!this.world.canOccupy(this.boat.x, this.boat.y, this.boat.radius, 'boat', this.tide.exposed)) {
       Object.assign(this.boat, this.world.dock);
@@ -281,6 +328,7 @@ class Game {
     if (!upgrade) return;
     this.boat.stop();
     this.persist(this.harbor);
+    this.configureBoat();
     this.signal('upgrade', this.boat);
     this.announce('TEKNE GÜÇLENDİ', upgrade.name, 'upgrade', 3);
   }

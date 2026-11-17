@@ -15,6 +15,9 @@ const CREW_PROJECTS = {
 const BOAT_UPGRADES = {
   lantern: { crew: 'smith', name: 'Pruva Feneri', cost: 3 },
   lens: { crew: 'smith', name: 'Uzak Menzil Merceği', cost: 4, requires: 'lantern' },
+  engine: { crew: 'smith', name: 'Motor Güçlendirmesi', cost: 5 },
+  armor: { crew: 'smith', name: 'Gövde Zırhı', cost: 5 },
+  crane: { crew: 'shipwright', name: 'Tekne Vinci', cost: 6 },
 };
 
 class HarborProgress {
@@ -46,7 +49,7 @@ class HarborProgress {
   get next() { return HARBOR_GOALS[this.tier]; }
   get ready() { return Boolean(this.next && this.relics.has(this.next.relic.id)); }
   get capacity() { return (this.built.findLast(goal => goal.capacity)?.capacity ?? 3) + Number(this.projects.has('smith')); }
-  get boatSpeed() { return (this.built.findLast(goal => goal.speed)?.speed ?? 187) + (this.projects.has('shipwright') ? 18 : 0); }
+  get boatSpeed() { return (this.built.findLast(goal => goal.speed)?.speed ?? 187) + (this.projects.has('shipwright') ? 18 : 0) + (this.fittings.has('engine') ? 32 : 0); }
   get beam() { return this.built.reduce((radius, goal) => radius + (goal.beam ?? 0), this.projects.has('diver') ? 226 : 197); }
 
   archive(cargo) {
