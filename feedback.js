@@ -18,12 +18,14 @@ class Feedback {
   }
 
   update(game) {
+    this.audio.update(game);
     for (const cue of game.cues.splice(0)) {
       const style = CUES[cue.type];
+      if (!style) continue;
+      this.audio.play(cue.type);
       this.effects.push({ ...cue, ...style, start: game.time });
     }
     this.effects = this.effects.filter(effect => game.time - effect.start < effect.duration);
-    this.audio.update(game);
   }
 
   draw(ctx, time) {
