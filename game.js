@@ -93,14 +93,9 @@ class Game {
   get nextDistrict() { return DISTRICTS[this.route]; }
   get atDock() { return this.mode === 'boat' && distance(this.boat, this.world.dock) < 52; }
   get full() { return this.cargo.length >= this.harbor.capacity; }
-  get returnTime() {
-    if (this.mode !== 'foot') return 0;
-    return Math.ceil(this.returnDistance(this.walker) / (this.walker.speed * 0.7)) + 1;
-  }
-
   get threat() {
     if (this.mode !== 'foot') return 'safe';
-    if (this.tide.rising) return 'critical';
+    if (this.tide.rising || !this.tide.exposed) return 'critical';
     return this.tide.warning ? 'warning' : 'safe';
   }
 
@@ -117,7 +112,7 @@ class Game {
 
   get objective() {
     if (this.mode === 'foot') {
-      if (this.threat === 'critical') return 'Tekneye dön';
+      if (this.threat === 'critical') return 'Yüksek rotadan tekneye dön';
       if (this.full) return 'Yük dolu · Tekneye dön';
       return this.expedition.nearest(this.walker) ? 'Bir kasa bul' : 'Kasalar açıldı · Tekneye dön';
     }
@@ -128,15 +123,17 @@ class Game {
 
   get interaction() {
     if (this.mode === 'foot') {
-      if (this.expedition.opening) return null;
-      if (distance(this.walker, this.boat) < 46 && this.world.hasClearLanding(this.boat, this.walker)) {
+      if (distance(this.walker, this.boat) < 48 && this.world.hasClearLanding(this.boat, this.walker)) {
         return { type: 'board', label: 'Tekneye bin' };
       }
-      const site = !this.full && this.expedition.nearest(this.walker, 35);
+      if (this.expedition.opening) return null;
+      const tile = this.world.district.tileAt(this.walker.x, this.walker.y);
+      const site = this.tide.exposed && this.world.wetness(tile, this.tide.water) < 0.4
+        && !this.full && this.expedition.nearest(this.walker, 35);
       return site ? { type: 'open', label: `${site.label} · ${site.seconds} sn`, site } : null;
     }
     if (this.atDock && this.cargo.length) return { type: 'archive', label: 'Buluntuları indir' };
-    const landing = this.tide.exposed && this.world.landingNear(this.boat);
+    const landing = this.tide.exposed && !this.tide.rising && this.world.landingNear(this.boat);
     return landing ? { type: 'land', label: 'Karaya çık', landing } : null;
   }
 
@@ -145,9 +142,15 @@ class Game {
     this.time += seconds;
     this.tide.advance(seconds, index => this.onPhaseChange(index));
     const actor = this.mode === 'boat' ? this.boat : this.walker;
-    const movementTime = this.mode === 'foot' ? seconds * (1 - this.tide.water * 0.3) : seconds;
+    const onFoot = this.mode === 'foot';
+    const start = onFoot && this.world.district.tileAt(actor.x, actor.y);
+    const movementTime = onFoot ? seconds * this.world.walkingFactor(start, this.tide.water) : seconds;
     actor.move(dx, dy, movementTime, (x, y) => this.world.canOccupy(x, y, actor.radius, this.mode, this.tide.exposed));
-    if (this.mode === 'foot') this.openVault(seconds, dx !== 0 || dy !== 0);
+    if (onFoot) {
+      const end = this.world.district.tileAt(actor.x, actor.y);
+      if (start !== end && this.world.isRaised(end)) actor.hopAt = this.time;
+      this.openVault(seconds, dx !== 0 || dy !== 0 || this.world.wetness(end, this.tide.water) >= 0.4);
+    }
   }
 
   openVault(seconds, moving) {
@@ -173,8 +176,9 @@ class Game {
 
   onPhaseChange(index) {
     if (index === 2) {
-      this.expedition.begin(this.nextDistrict, this.harbor.relics, this.cargo);
-      if (!this.world.canOccupy(this.boat.x, this.boat.y, this.boat.radius, 'boat', true)) {
+      const district = this.mode === 'foot' ? this.expedition.district : this.nextDistrict;
+      this.expedition.begin(district, this.harbor.relics, this.cargo);
+      if (this.mode === 'boat' && !this.world.canOccupy(this.boat.x, this.boat.y, this.boat.radius, 'boat', true)) {
         Object.assign(this.boat, this.world.nearestWater(this.boat));
         this.boat.stop();
       }
@@ -185,11 +189,10 @@ class Game {
     if (index === 0) {
       this.expedition.end();
       if (this.mode === 'foot') {
-        const lost = this.cargo.length;
-        this.cargo = [];
-        this.mode = 'boat';
-        this.signal('flood', this.boat);
-        this.announce('TAŞKIN', lost ? 'Yük kayboldu' : 'Tekneye döndün', 'danger', 4);
+        const tile = this.world.district.tileAt(this.walker.x, this.walker.y);
+        const lost = !this.world.isRaised(tile) && this.cargo.pop();
+        this.signal('flood', this.walker);
+        this.announce('TAŞKIN', lost ? 'Akıntı bir buluntuyu aldı' : 'Yüksek rotayı izle', 'danger', 4);
       }
     }
   }
@@ -201,12 +204,15 @@ class Game {
     if (action.type === 'board') {
       this.mode = 'boat';
       this.walker.moving = false;
+      this.expedition.opening = null;
+      this.world.escape.clear();
     }
     if (action.type === 'land') {
       Object.assign(this.walker, { x: action.landing.x, y: action.landing.y, moving: false, heading: this.boat.heading });
       this.boat.stop();
       this.mode = 'foot';
-      this.returnDistance = this.world.returnDistances(action.landing);
+      this.walker.hopAt = undefined;
+      this.world.markEscapeRoute(action.landing);
     }
     if (action.type === 'open') this.expedition.opening = { site: action.site, elapsed: 0 };
     if (action.type === 'archive') this.archive();

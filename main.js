@@ -27,7 +27,7 @@ class Keyboard {
 
 class Hud {
   constructor() {
-    const ids = ['game', 'phase', 'mode', 'location', 'objective', 'return-time', 'cargo',
+    const ids = ['game', 'phase', 'mode', 'location', 'objective', 'cargo',
       'banner', 'banner-caption', 'banner-title', 'waypoint', 'waypoint-arrow', 'waypoint-name',
       'action', 'action-label', 'opening', 'opening-label', 'opening-meter', 'harbor', 'harbor-title', 'harbor-requirement',
       'upgrade', 'route', 'pause', 'pause-layer', 'resume', 'sound', 'collection', 'collection-open', 'collection-items'];
@@ -49,8 +49,6 @@ class Hud {
     this.text('mode', onFoot ? 'Yaya' : 'Teknede');
     this.text('location', game.atDock ? 'Başlangıç Limanı' : game.expedition.district.name);
     this.text('objective', game.objective);
-    this.ui['return-time'].hidden = !onFoot;
-    if (onFoot) this.text('return-time', '~' + game.returnTime + ' sn · Tekne');
     this.drawCargo(game.cargo, harbor.capacity);
 
     const action = game.interaction;

@@ -57,7 +57,6 @@ button:focus-visible { outline: 2px solid var(--cyan); outline-offset: 4px; }
 .task .eyebrow i { width: 5px; height: 5px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 10px #84f9d7cf; }
 .task h2 { margin: 9px 0 5px; font: 600 clamp(28px, 4.1vw, 65px)/1.06 var(--serif); letter-spacing: -.035em; text-shadow: 0 4px 24px #050f1e; }
 .objective { display: flex; align-items: center; flex-wrap: wrap; gap: 7px 14px; color: #e5edeb; font-size: 14px; }
-#return-time { color: var(--gold); font: 600 11px/1.2 'Inter', sans-serif; text-transform: uppercase; }
 .cargo { display: flex; gap: 5px; margin-top: 12px; min-height: 28px; }
 .cargo-slot { width: 27px; height: 27px; display: grid; place-items: center; border: 1px solid #84c2c44a; border-radius: 5px; color: var(--muted); background: #0b1a26be; }
 .cargo-slot[data-filled] { color: var(--item-color); border-color: var(--item-color); }

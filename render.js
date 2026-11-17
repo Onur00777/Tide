@@ -268,11 +268,7 @@ class Renderer {
       ctx.restore();
     }
     this.surf(district.coast, game.time, 1 - water * 0.9);
-    if (game.tide.warning) {
-      for (const tile of this.world.district.tiles) {
-        if (tile.type === TERRAIN.square) this.drawPuddle(tile, game.time, true);
-      }
-    }
+    this.drawDistrictConditions(game);
     ctx.drawImage(this.harbor.canvas, 0, 0, VIEW.width, VIEW.height);
     this.surf(this.harbor.coast, game.time, 1);
     this.harborDetails(game.harbor, game.time);
@@ -299,12 +295,47 @@ class Renderer {
     }
   }
 
-  drawPuddle({ x, y }, time, warning) {
+  drawDistrictConditions(game) {
+    const { tide, time } = game;
+    const ctx = this.ctx;
+    if (tide.exposed) {
+      for (const [tile, kind] of this.world.hazards) {
+        if (this.world.isRaised(tile)) continue;
+        if (kind === 'pool') {
+          this.drawPuddle(tile, time, tide.warning, this.world.wetness(tile, tide.water));
+          continue;
+        }
+        const { x, y } = tile;
+        ctx.fillStyle = kind === 'algae' ? '#638956a6' : '#785745c4';
+        ctx.fillRect(x - 13, y - 13, 26, 26);
+        for (let i = 0; i < 7; i++) {
+          const ox = (i * 13 + tile.col) % 21 - 10;
+          const oy = (i * 9 + tile.row) % 21 - 10;
+          this.disc(x + ox, y + oy, 2.2, kind === 'algae' ? '#a0af688e' : '#432e28a3');
+        }
+      }
+    }
+    for (const tile of this.world.escape) {
+      const { x, y } = tile;
+      if (!this.world.roofs.has(tile)) {
+        ctx.fillStyle = '#514c42';
+        ctx.fillRect(x - 13, y - 10, 26, 24);
+        ctx.fillStyle = '#8a8170';
+        ctx.fillRect(x - 13, y - 13, 26, 23);
+      }
+      // Pale coping marks the continuous dry route back to the landing.
+      ctx.strokeStyle = '#ebd4a8b0';
+      ctx.lineWidth = 1.3;
+      ctx.strokeRect(x - 11, y - 11, 22, 21);
+    }
+  }
+
+  drawPuddle({ x, y }, time, warning, depth) {
     const ctx = this.ctx;
     const tremor = warning ? Math.sin(time * 33 + x) * 1.1 : 0;
-    ctx.fillStyle = '#326277a8';
+    ctx.fillStyle = `rgba(43, 108, 134, ${0.62 + depth * 0.32})`;
     ctx.beginPath();
-    ctx.ellipse(x + tremor, y, 11, 6, -0.15, 0, Math.PI * 2);
+    ctx.ellipse(x + tremor, y, 11 + depth * 4, 6 + depth * 9, -0.15, 0, Math.PI * 2);
     ctx.fill();
     if (!warning) return;
     ctx.strokeStyle = '#c1f1e2bc';
@@ -667,7 +698,8 @@ class Renderer {
     const ctx = this.ctx;
     this.glow(walker.x, walker.y, 24, 0.23);
     ctx.save();
-    ctx.translate(walker.x, walker.y);
+    const hop = clamp((time - (walker.hopAt ?? -1)) / 0.27, 0, 1);
+    ctx.translate(walker.x, walker.y - Math.sin(hop * Math.PI) * 5);
     ctx.rotate(walker.heading);
     const pace = walker.moving ? Math.sin(time * 16) * 2.3 : 0;
     ctx.fillStyle = '#14212b';

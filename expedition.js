@@ -65,14 +65,6 @@ const VAULTS = [
   { label: 'Zırhlı Kasa', seconds: 12 },
 ];
 
-function shuffle(items) {
-  for (let i = items.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [items[i], items[j]] = [items[j], items[i]];
-  }
-  return items;
-}
-
 class Expedition {
   constructor(world) {
     this.world = world;
@@ -85,10 +77,11 @@ class Expedition {
     if (district !== this.district) this.world.setDistrict(district.map);
     this.district = district;
     this.opening = null;
+    this.world.rollHazards();
     const patch = this.world.district;
     const candidates = shuffle(patch.tiles.filter(tile =>
       (tile.type === TERRAIN.rubble || tile.type === TERRAIN.door) && tile.col >= 4 && tile.col <= 16
-      && DIRECTIONS.some(([dx, dy]) => this.world.isWalkable(patch.at(tile.col + dx, tile.row + dy)))));
+      && patch.neighbors(tile).some(neighbor => this.world.isFootTile(neighbor) && !this.world.hazards.has(neighbor))));
     const spots = [];
     for (const tile of candidates) {
       if (spots.some(existing => distance(existing, tile) < 57)) continue;

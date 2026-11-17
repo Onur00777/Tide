@@ -16,7 +16,9 @@ Bu klasördeki `index.html` dosyasını tarayıcıda aç. Kurulum veya yerel sun
 
 ## Sefer
 
-Çekilmeden taşkına 100 saniye var. Kasaların yeri seferden sefere değişir ve kasalar 5–12 saniyede açılır. Son 14 saniyede yükselen su yürüyüşü yavaşlatır. Taşkına yaya yakalanırsan teslim edilmemiş yükün kaybolur.
+Çekilme süresi her döngüde değişir. Su birikintileri köpürmeye başladığında kıyı uğultusuna ve ekranın mavi kenarlarına dikkat et. Kasalar, yosun, çamur ve erken dolan çukurlar her döngüde yer değiştirir. Kasalar 5–12 saniyede açılır.
+
+Yosun ve çamurun etrafından dolaşabilir, su yükselince açık renkli taşlar ve çatılar üzerinden teknene dönebilirsin. Taşkın sırasında suyun içindeki yürüyüş yavaşlar. Su en yüksek seviyeye ulaştığında alçakta kalırsan akıntı bir buluntunu alabilir.
 
 İlk rotada Boğulmuş Kaptanın Günlüğü’nü bul. İskelede indirince **Yükselt** düğmesi açılır. Liman atölyesinden feneri, demirciyi ve derin su vincini kur. Atölyedeki rota düğmesiyle açık mahalleler arasında geçiş yap.
 
