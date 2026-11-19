@@ -11,8 +11,11 @@
   <link rel="stylesheet" href="style.css">
   <script defer src="world.js"></script>
   <script defer src="expedition.js"></script>
+  <script defer src="crew.js"></script>
   <script defer src="progression.js"></script>
+  <script defer src="boat.js"></script>
   <script defer src="game.js"></script>
+  <script defer src="audio.js"></script>
   <script defer src="feedback.js"></script>
   <script defer src="render.js"></script>
   <script defer src="camera.js"></script>
@@ -25,11 +28,12 @@
 
     <header class="top">
       <div class="brand"><i class="mark" aria-hidden="true"><b></b></i><h1>Gelgit</h1></div>
-      <section class="tide glass" id="tide" aria-label="Gelgit sayacı">
-        <div class="tide-readout"><span id="phase">Yüksek su</span><strong id="timer">0:10</strong></div>
-        <div class="track" id="tide-meter" role="progressbar" aria-label="Gelgit döngüsü" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="tide-fill"></i></div>
+      <section class="tide glass" id="tide" aria-label="Gelgit durumu">
+        <div class="tide-readout" id="phase" role="status">Yüksek Su</div>
+        <div class="track" aria-hidden="true"></div>
       </section>
       <nav class="toolbar" aria-label="Oyun seçenekleri">
+        <button id="chart-open" class="glass" type="button" aria-haspopup="dialog" aria-keyshortcuts="M">Harita</button>
         <button id="collection-open" class="glass" type="button" aria-haspopup="dialog">Koleksiyon</button>
         <button id="sound" class="glass" type="button" aria-pressed="true" aria-label="Oyun sesi">Ses</button>
         <button id="pause" class="glass pause-button" type="button" aria-pressed="false" aria-label="Duraklat"><span aria-hidden="true">Ⅱ</span></button>
@@ -42,11 +46,13 @@
     <section class="task" aria-label="Sefer hedefi">
       <span class="eyebrow"><i></i><span id="mode">Teknede</span></span>
       <h2 id="location">Başlangıç Limanı</h2>
-      <div class="objective"><span id="objective">Çekilmeyi bekle</span><span id="return-time" hidden></span></div>
+      <div class="objective"><span id="objective">Çekilmeyi bekle</span></div>
+      <div id="hull" class="hull-status" aria-label="Gövde durumu"><span id="hull-value"></span><meter id="hull-meter" min="0" max="100" low="36" high="70" optimum="100" value="100" aria-label="Gövde dayanıklılığı"></meter></div>
+      <div class="repair-tools"><span id="scrap"></span><button id="repair" class="glass" type="button" hidden></button></div>
       <div class="cargo" id="cargo" aria-label="Yük"></div>
     </section>
 
-    <div class="interaction">
+    <div class="interaction" id="interaction">
       <button id="action" class="action glass" type="button" hidden><kbd>E</kbd><span id="action-label"></span></button>
       <div id="opening" class="opening glass" hidden>
         <span id="opening-label">Kasa açılıyor</span>
@@ -56,14 +62,37 @@
 
     <section id="harbor" class="harbor glass" aria-labelledby="harbor-title" hidden>
       <div class="harbor-heading"><span class="eyebrow">Liman atölyesi</span><span class="harbor-icon" aria-hidden="true">◇</span></div>
+      <nav id="crew-tabs" class="crew-tabs" aria-label="Liman bölümleri" hidden></nav>
       <h2 id="harbor-title">Feneri Güçlendir</h2>
       <p id="harbor-requirement">Boğulmuş Kaptanın Günlüğü</p>
       <button id="upgrade" class="upgrade" type="button" disabled>Yükselt <span aria-hidden="true">↗</span></button>
+      <button id="crew-upgrade" class="upgrade" type="button" hidden>İnşa et <span aria-hidden="true">↗</span></button>
+      <div id="boat-upgrades" class="boat-upgrades" hidden></div>
       <button id="route" class="route" type="button" hidden></button>
+      <div id="harbor-action" class="harbor-action"></div>
     </section>
 
-    <div class="controls" aria-label="Klavye kontrolleri"><kbd>WASD</kbd><span>Hareket</span><kbd>E</kbd><span>Etkileşim</span></div>
+    <div class="touch-controls" id="touch-controls" aria-label="Dokunmatik kontroller">
+      <div class="touch-pad">
+        <button type="button" class="glass" data-key="ArrowUp" aria-label="Yukarı">↑</button>
+        <button type="button" class="glass" data-key="ArrowLeft" aria-label="Sol">←</button>
+        <button type="button" class="glass" data-key="ArrowDown" aria-label="Aşağı">↓</button>
+        <button type="button" class="glass" data-key="ArrowRight" aria-label="Sağ">→</button>
+      </div>
+      <button type="button" class="glass touch-brake" data-key="Space" id="touch-brake">Fren</button>
+    </div>
+    <div class="controls" aria-label="Klavye kontrolleri"><kbd>WASD</kbd><span>Hareket</span><kbd>E</kbd><span>Etkileşim</span><kbd>Boşluk</kbd><span>Fren</span></div>
     <div id="pause-layer" class="pause-layer" hidden><button class="glass" id="resume" type="button">Devam et</button></div>
+
+    <dialog class="collection chart glass" id="chart" aria-labelledby="chart-title">
+      <header><h2 id="chart-title">Seyir haritası</h2><form method="dialog"><button type="submit" aria-label="Haritayı kapat">×</button></form></header>
+      <p id="chart-location"></p>
+      <canvas id="chart-map" width="1100" height="620" aria-describedby="chart-location chart-legend"></canvas>
+      <ul class="chart-legend" id="chart-legend">
+        <li><i class="chart-you"></i>Konumun</li><li><i class="chart-harbor"></i>Liman</li>
+        <li><i class="chart-shore"></i>Yanaşma</li><li><i class="chart-escape"></i>Yüksek dönüş yolu</li>
+      </ul>
+    </dialog>
 
     <dialog class="collection glass" id="collection" aria-labelledby="collection-title">
       <header><h2 id="collection-title">Koleksiyon</h2><form method="dialog"><button type="submit" aria-label="Koleksiyonu kapat">×</button></form></header>

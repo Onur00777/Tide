@@ -15,6 +15,10 @@ const RELICS = Object.fromEntries([
   ['rotor', 'Fenerin İlk Rotoru', 'Mekanik', '⚙', '#ff9d6d'],
 ].map(([id, name, kind, icon, color]) => [id, { id, name, kind, icon, color }]));
 
+const SCRAP_CRATE = { id: 'scrap', name: 'Hurda Kasası', icon: '▦', color: '#bbad93', scrap: 2 };
+
+const DEEP_CRATE = { id: 'deep-scrap', name: 'Ağır Hurda Kasası', icon: '▦', color: '#bad2ce', scrap: 4, weight: 1.45 };
+
 const DISTRICTS = [
   { name: 'Fener Sokağı', finds: ['journal', 'signal', 'ledger', 'spring'], map: DISTRICT_MAP },
   {
@@ -65,30 +69,26 @@ const VAULTS = [
   { label: 'Zırhlı Kasa', seconds: 12 },
 ];
 
-function shuffle(items) {
-  for (let i = items.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [items[i], items[j]] = [items[j], items[i]];
-  }
-  return items;
-}
-
 class Expedition {
   constructor(world) {
     this.world = world;
     this.district = DISTRICTS[0];
     this.sites = [];
     this.opening = null;
+    this.hoist = null;
+    this.deepSite = null;
   }
 
   begin(district, owned, cargo) {
     if (district !== this.district) this.world.setDistrict(district.map);
     this.district = district;
     this.opening = null;
+    this.world.rollHazards();
+    this.rollDeepSite();
     const patch = this.world.district;
     const candidates = shuffle(patch.tiles.filter(tile =>
       (tile.type === TERRAIN.rubble || tile.type === TERRAIN.door) && tile.col >= 4 && tile.col <= 16
-      && DIRECTIONS.some(([dx, dy]) => this.world.isWalkable(patch.at(tile.col + dx, tile.row + dy)))));
+      && patch.neighbors(tile).some(neighbor => this.world.isFootTile(neighbor) && !this.world.hazards.has(neighbor))));
     const spots = [];
     for (const tile of candidates) {
       if (spots.some(existing => distance(existing, tile) < 57)) continue;
@@ -104,6 +104,13 @@ class Expedition {
     const documented = shuffle(finds.filter(item => !uncollected.includes(item)));
     const rewards = [...uncollected, ...documented];
     this.sites = spots.map((tile, index) => ({ ...tile, ...VAULTS[index], item: rewards[index], opened: false }));
+  }
+
+  rollDeepSite() {
+    const choices = [...new Set(this.world.approaches.map(point => point.tile))].filter(tile => tile.col <= 9);
+    const tile = choices[Math.floor(Math.random() * choices.length)];
+    this.deepSite = tile ? { ...tile, seconds: 5, opened: false } : null;
+    this.hoist = null;
   }
 
   end() {

@@ -1,37 +1,60 @@
 'use strict';
 
-const MOVEMENT = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight']);
+const MOVEMENT = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight', 'Space']);
 
 class Keyboard {
-  constructor(onInteract, onPause, modal) {
+  constructor(onInteract, onPause, onRepair, onChart, overlayOpen, touchControls) {
     this.keys = new Set();
+    this.pointers = new Map();
     window.addEventListener('keydown', event => {
-      if (modal.open || event.ctrlKey || event.altKey || event.metaKey) return;
+      if (event.ctrlKey || event.altKey || event.metaKey) return;
+      if (event.code === 'KeyM' && !event.repeat) onChart();
+      if (overlayOpen()) return;
+      if (event.code === 'Space' && event.target instanceof HTMLButtonElement) return;
       if (MOVEMENT.has(event.code)) {
         event.preventDefault();
         this.keys.add(event.code);
       }
       if (event.repeat) return;
       if (event.code === 'KeyE') onInteract();
+      if (event.code === 'KeyR') onRepair();
       if (event.code === 'Escape') onPause();
     });
     window.addEventListener('keyup', event => this.keys.delete(event.code));
     window.addEventListener('blur', () => this.clear());
+    touchControls.addEventListener('pointerdown', event => {
+      const button = event.target.closest('button[data-key]');
+      if (!button || overlayOpen()) return;
+      event.preventDefault();
+      button.setPointerCapture(event.pointerId);
+      this.pointers.set(event.pointerId, button.dataset.key);
+    });
+    for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) {
+      touchControls.addEventListener(type, event => this.pointers.delete(event.pointerId));
+    }
   }
 
-  clear() { this.keys.clear(); }
+  clear() {
+    this.keys.clear();
+    this.pointers.clear();
+  }
+
+  get braking() { return this.held('Space'); }
   get dx() { return Number(this.held('KeyD', 'ArrowRight')) - Number(this.held('KeyA', 'ArrowLeft')); }
   get dy() { return Number(this.held('KeyS', 'ArrowDown')) - Number(this.held('KeyW', 'ArrowUp')); }
-  held(a, b) { return this.keys.has(a) || this.keys.has(b); }
+  held(a, b) {
+    return this.keys.has(a) || this.keys.has(b) || [...this.pointers.values()].some(key => key === a || key === b);
+  }
 }
 
 class Hud {
   constructor() {
-    const ids = ['game', 'phase', 'timer', 'tide-meter', 'tide-fill', 'mode', 'location', 'objective', 'return-time', 'cargo',
+    const ids = ['game', 'phase', 'mode', 'location', 'objective', 'cargo', 'hull', 'hull-value', 'hull-meter', 'scrap', 'repair',
       'banner', 'banner-caption', 'banner-title', 'waypoint', 'waypoint-arrow', 'waypoint-name',
-      'action', 'action-label', 'opening', 'opening-label', 'opening-meter', 'harbor', 'harbor-title', 'harbor-requirement',
-      'upgrade', 'route', 'pause', 'pause-layer', 'resume', 'sound', 'collection', 'collection-open', 'collection-items'];
+      'interaction', 'harbor-action', 'action', 'action-label', 'opening', 'opening-label', 'opening-meter', 'harbor', 'harbor-title', 'harbor-requirement',
+      'upgrade', 'crew-tabs', 'boat-upgrades', 'crew-upgrade', 'route', 'pause', 'pause-layer', 'resume', 'sound', 'collection', 'collection-open', 'collection-items', 'chart', 'chart-open', 'chart-map', 'chart-location', 'touch-controls', 'touch-brake'];
     this.ui = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
+    this.harborTab = '';
   }
 
   text(id, value) {
@@ -42,43 +65,42 @@ class Hud {
   draw(game, camera) {
     const { tide, harbor, paused } = game;
     const onFoot = game.mode === 'foot';
-    const seconds = Math.ceil(tide.exposed ? tide.untilFlood : tide.remaining);
-    const clock = Math.floor(seconds / 60) + ':' + String(seconds % 60).padStart(2, '0');
-    this.ui.game.dataset.threat = game.threat;
+    this.ui.game.dataset.tide = tide.rising ? 'rising' : tide.warning ? 'warning' : 'still';
+    this.ui.game.style.setProperty('--surge', tide.surge);
     this.text('phase', tide.phase.name);
-    this.text('timer', clock);
-    const percent = tide.progress * 100;
-    this.ui['tide-fill'].style.width = percent + '%';
-    this.ui['tide-meter'].setAttribute('aria-valuenow', String(Math.floor(percent)));
 
+    this.ui['touch-controls'].hidden = paused;
+    this.ui['touch-brake'].hidden = onFoot;
     this.text('mode', onFoot ? 'Yaya' : 'Teknede');
     this.text('location', game.atDock ? 'Başlangıç Limanı' : game.expedition.district.name);
     this.text('objective', game.objective);
-    this.ui['return-time'].hidden = !onFoot;
-    if (onFoot) this.text('return-time', '~' + game.returnTime + ' sn · Tekne');
     this.drawCargo(game.cargo, harbor.capacity);
+    const scrapAtSea = game.onboardScrap;
+    this.text('scrap', harbor.scrap || scrapAtSea ? 'Hurda ×' + harbor.scrap + (scrapAtSea ? ' · Yükte +' + scrapAtSea : '') : '');
+    this.ui.repair.hidden = onFoot || paused || game.boat.hull === 100;
+    this.ui.repair.disabled = !game.canRepair;
+    this.text('repair', game.atDock ? 'R · Ücretsiz tamir' : 'R · Tamir (' + game.repairCost + ' hurda)');
+    this.ui.hull.hidden = onFoot;
+    this.ui['hull-meter'].value = game.boat.hull;
+    this.text('hull-value', 'Gövde %' + game.boat.hull + (game.boat.flood > 0.07 ? ' · Su alıyor' : ''));
 
     const action = game.interaction;
-    const opening = game.expedition.opening;
+    const opening = game.expedition.hoist ?? game.expedition.opening;
+    const actionParent = this.ui[game.atDock ? 'harbor-action' : 'interaction'];
+    if (this.ui.action.parentElement !== actionParent) actionParent.append(this.ui.action);
     this.ui.action.hidden = paused || !action;
     this.text('action-label', action?.label ?? '');
     this.ui.opening.hidden = !opening || paused;
     if (opening) {
-      this.text('opening-label', 'Kasa açılıyor · ' + Math.ceil(opening.site.seconds - opening.elapsed) + ' sn');
+      this.text('opening-label', (game.expedition.hoist ? 'Vinç çekiyor · ' : 'Kasa açılıyor · ') + Math.ceil(opening.site.seconds - opening.elapsed) + ' sn');
       this.ui['opening-meter'].value = opening.elapsed / opening.site.seconds;
     }
 
     this.ui.harbor.hidden = !game.atDock || paused;
-    const goal = harbor.next;
-    this.text('harbor-title', goal?.title ?? 'Liman tamamlandı');
-    this.text('harbor-requirement', harbor.ready ? 'Geliştirme hazır' : goal?.relic.name ?? '');
-    this.ui.upgrade.disabled = !harbor.ready;
-    this.ui.upgrade.hidden = !goal;
-    this.ui.route.hidden = !harbor.tier;
-    this.text('route', 'Rota · ' + game.nextDistrict.name + '  ↻');
+    if (!this.ui.harbor.hidden) this.drawHarbor(harbor, game.nextDistrict, game.expedition.district);
 
     this.ui.pause.setAttribute('aria-pressed', String(paused));
-    this.ui['pause-layer'].hidden = !paused || this.ui.collection.open;
+    this.ui['pause-layer'].hidden = !paused || this.ui.collection.open || this.ui.chart.open;
     const banner = game.banner;
     this.ui.banner.hidden = paused || !banner || banner.until <= game.time;
     if (!this.ui.banner.hidden) {
@@ -89,8 +111,61 @@ class Hud {
     this.drawWaypoint(game.target, camera, paused);
   }
 
+  drawHarbor(harbor, district, currentDistrict) {
+    const tabs = this.ui['crew-tabs'];
+    tabs.hidden = !harbor.crew.size;
+    if (this.crewCount !== harbor.crew.size) {
+      this.crewCount = harbor.crew.size;
+      const members = Object.values(CREW).filter(member => harbor.crew.has(member.id));
+      tabs.replaceChildren(...[{ id: '', name: 'Liman' }, ...members].map(({ id, name }) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = name;
+        button.dataset.project = id;
+        return button;
+      }));
+    }
+    for (const button of tabs.children) {
+      const active = String(button.dataset.project === this.harborTab);
+      if (button.getAttribute('aria-pressed') !== active) button.setAttribute('aria-pressed', active);
+    }
+
+    const project = CREW_PROJECTS[this.harborTab];
+    const goal = harbor.next;
+    const complete = harbor.projects.has(this.harborTab);
+    this.text('harbor-title', project?.title ?? goal?.title ?? 'Liman tamamlandı');
+    this.text('harbor-requirement', project ? (complete ? 'İnşa tamamlandı' : project.detail)
+      : (harbor.ready ? 'Geliştirme hazır' : goal?.relic.name ?? ''));
+    this.drawBoatUpgrades(harbor);
+    this.ui['crew-upgrade'].hidden = !project || complete;
+    this.ui.upgrade.disabled = !harbor.ready;
+    this.ui.upgrade.hidden = Boolean(project) || !goal;
+    this.ui.route.hidden = Boolean(project) || !harbor.tier;
+    this.text('route', (district === currentDistrict ? 'Rota · ' : 'Sonraki gelgit · ') + district.name + '  ↻');
+  }
+
+  drawBoatUpgrades(harbor) {
+    const list = this.ui['boat-upgrades'];
+    const options = Object.entries(BOAT_UPGRADES).filter(([, upgrade]) => upgrade.crew === this.harborTab);
+    list.hidden = !options.length;
+    const key = [this.harborTab, harbor.scrap, ...harbor.fittings].join(':');
+    if (this.upgradeKey === key) return;
+    this.upgradeKey = key;
+    list.replaceChildren(...options.map(([id, upgrade]) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.dataset.fitting = id;
+      button.disabled = !harbor.canFit(id);
+      const status = harbor.fittings.has(id) ? 'Takılı'
+        : upgrade.requires && !harbor.fittings.has(upgrade.requires) ? BOAT_UPGRADES[upgrade.requires].name + ' gerekli'
+        : upgrade.cost + ' hurda';
+      button.textContent = upgrade.name + ' · ' + status;
+      return button;
+    }));
+  }
+
   drawCargo(items, capacity) {
-    const key = capacity + ':' + items.map(item => item.id).join(',');
+    const key = capacity + ':' + items.map(item => item.id + (item.scrap ?? '')).join(',');
     if (key === this.cargoKey) return;
     this.cargoKey = key;
     const slots = Array.from({ length: capacity }, (_, index) => {
@@ -98,7 +173,7 @@ class Hud {
       slot.className = 'cargo-slot';
       const item = items[index];
       slot.textContent = item?.icon ?? '·';
-      slot.title = item?.name ?? 'Boş yük yuvası';
+      slot.title = item?.scrap ? item.name + ' · ' + item.scrap + ' hurda' : item?.name ?? 'Boş yük yuvası';
       if (item) {
         slot.dataset.filled = '';
         slot.style.setProperty('--item-color', item.color);
@@ -128,6 +203,34 @@ class Hud {
     this.text('waypoint-name', target.label);
   }
 
+  drawChart(game) {
+    const { world, tide } = game;
+    this.text('chart-location', game.expedition.district.name + ' · ' + tide.phase.name);
+    const canvas = this.ui['chart-map'];
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#071c2a';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    const size = VIEW.tile;
+    for (const tile of world.harbor.tiles) {
+      ctx.fillStyle = tile.type === TERRAIN.pier ? '#c08c62' : '#625d4b';
+      ctx.fillRect(tile.x - size / 2, tile.y - size / 2, size, size);
+    }
+    for (const tile of world.district.tiles) {
+      ctx.fillStyle = world.escape.has(tile) ? '#80b078' : tide.exposed
+        ? (world.isFootTile(tile) ? '#496778' : '#283d4a') : '#1d3647';
+      ctx.fillRect(tile.x - size / 2 + 1, tile.y - size / 2 + 1, size - 2, size - 2);
+    }
+    const pins = [[world.dock, '#ffbc78', 13], [world.shoreTarget, '#87eddb', 12],
+      [game.boat, '#a8bcc4', 9], [game.mode === 'foot' ? game.walker : game.boat, '#fff3cc', 10]];
+    for (const [point, color, radius] of pins) {
+      if (!point) continue;
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
   drawCollection(harbor) {
     const cards = Object.values(RELICS).map(item => {
       const visible = harbor.relics.has(item.id);
@@ -151,46 +254,79 @@ const renderer = new Renderer(canvas, game.world);
 const camera = new Camera(canvas, game.boat);
 const feedback = new Feedback();
 const hud = new Hud();
-const collection = hud.ui.collection;
+const { collection, chart } = hud.ui;
 
 function togglePause() {
-  if (collection.open) return;
+  if (collection.open || chart.open) return;
   game.paused = !game.paused;
   keyboard.clear();
 }
 
-const keyboard = new Keyboard(() => game.interact(), togglePause, collection);
+const keyboard = new Keyboard(() => game.interact(), togglePause, () => game.repair(), toggleChart,
+  () => collection.open || chart.open, hud.ui['touch-controls']);
 hud.ui.pause.addEventListener('click', togglePause);
 hud.ui.resume.addEventListener('click', togglePause);
 hud.ui.action.addEventListener('click', () => game.interact());
+hud.ui.repair.addEventListener('click', () => game.repair());
 hud.ui.upgrade.addEventListener('click', () => game.upgrade());
+hud.ui['crew-tabs'].addEventListener('click', event => {
+  if (event.target.matches('button[data-project]')) hud.harborTab = event.target.dataset.project;
+});
+hud.ui['crew-upgrade'].addEventListener('click', () => game.buildCrewProject(hud.harborTab));
+hud.ui['boat-upgrades'].addEventListener('click', event => {
+  if (event.target.matches('button[data-fitting]')) game.fitBoat(event.target.dataset.fitting);
+});
 hud.ui.route.addEventListener('click', () => game.switchRoute());
 
 window.addEventListener('pointerdown', () => feedback.audio.unlock());
 window.addEventListener('keydown', () => feedback.audio.unlock());
+function drawSoundLevel() {
+  const labels = { on: 'Ses', quiet: 'Kısık', off: 'Sessiz' };
+  const { level } = feedback.audio;
+  hud.ui.sound.textContent = labels[level];
+  hud.ui.sound.title = labels[level];
+  hud.ui.sound.setAttribute('aria-pressed', level === 'quiet' ? 'mixed' : String(level === 'on'));
+}
+
+drawSoundLevel();
 hud.ui.sound.addEventListener('click', () => {
-  feedback.audio.toggle();
-  hud.ui.sound.setAttribute('aria-pressed', String(feedback.audio.enabled));
+  feedback.audio.cycleLevel();
+  drawSoundLevel();
+});
+document.addEventListener('visibilitychange', () => {
+  keyboard.clear();
+  feedback.audio.setVisible(!document.hidden);
 });
 
-let pausedBeforeCollection = false;
-hud.ui['collection-open'].addEventListener('click', () => {
-  pausedBeforeCollection = game.paused;
+let pausedBeforeOverlay = false;
+function openOverlay(dialog, draw) {
+  if (collection.open || chart.open) return;
+  pausedBeforeOverlay = game.paused;
   game.paused = true;
   keyboard.clear();
-  hud.drawCollection(game.harbor);
-  collection.showModal();
-});
-collection.addEventListener('close', () => {
-  game.paused = pausedBeforeCollection;
-  keyboard.clear();
-});
+  draw();
+  dialog.showModal();
+}
+
+function toggleChart() {
+  if (chart.open) chart.close();
+  else openOverlay(chart, () => hud.drawChart(game));
+}
+
+hud.ui['chart-open'].addEventListener('click', toggleChart);
+hud.ui['collection-open'].addEventListener('click', () => openOverlay(collection, () => hud.drawCollection(game.harbor)));
+for (const dialog of [collection, chart]) {
+  dialog.addEventListener('close', () => {
+    game.paused = pausedBeforeOverlay;
+    keyboard.clear();
+  });
+}
 
 let previousFrame;
 function frame(now) {
   const seconds = previousFrame === undefined ? 0 : Math.min((now - previousFrame) / 1000, 1 / 30);
   previousFrame = now;
-  game.update(seconds, keyboard.dx, keyboard.dy);
+  game.update(seconds, keyboard.dx, keyboard.dy, keyboard.braking);
   feedback.update(game);
   camera.follow(game, seconds);
   camera.apply(renderer.ctx);

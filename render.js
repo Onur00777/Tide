@@ -24,6 +24,12 @@ function noiseFrom(seed) {
   };
 }
 
+const HARBOR_HOMES = {
+  smith: { x: 140, y: 416, roof: '#975f4b' },
+  diver: { x: 198, y: 272, roof: '#6a8782' },
+  shipwright: { x: 239, y: 407, roof: '#98754e' },
+};
+
 class Renderer {
   constructor(canvas, world) {
     this.ctx = canvas.getContext('2d');
@@ -33,16 +39,27 @@ class Renderer {
       x: random() * VIEW.width, y: random() * VIEW.height,
       length: 8 + random() * 27, offset: random() * Math.PI * 2,
     })));
-    this.harbor = this.paintPatch(world.harbor, false);
     this.districtLayers = new Map();
-    this.openWater = new Path2D();
-    this.openWater.rect(0, 0, VIEW.width, VIEW.height);
-    this.openWater.addPath(this.harbor.land);
+    this.refreshHarbor();
     const ctx = this.ctx;
     this.sea = this.paintSea();
+    this.darkness = document.createElement('canvas');
+    this.darkness.width = VIEW.width;
+    this.darkness.height = VIEW.height;
+    this.darkCtx = this.darkness.getContext('2d');
     this.vignette = ctx.createRadialGradient(550, 286, 125, 550, 286, 635);
     this.vignette.addColorStop(0, '#04142100');
     this.vignette.addColorStop(1, '#041421a8');
+  }
+
+  refreshHarbor() {
+    if (this.harborPatch === this.world.harbor) return;
+    this.harborPatch = this.world.harbor;
+    this.harbor = this.paintPatch(this.harborPatch, false);
+    this.openWater = new Path2D();
+    this.openWater.rect(0, 0, VIEW.width, VIEW.height);
+    this.openWater.addPath(this.harbor.land);
+    this.districtLayers.clear();
   }
 
   districtLayer() {
@@ -250,6 +267,7 @@ class Renderer {
 
   draw(game) {
     const ctx = this.ctx;
+    this.refreshHarbor();
     const district = this.districtLayer();
     const water = game.tide.water;
     const night = 0.38 + (1 - water) * 0.62;
@@ -268,6 +286,7 @@ class Renderer {
       ctx.restore();
     }
     this.surf(district.coast, game.time, 1 - water * 0.9);
+    this.drawDistrictConditions(game);
     ctx.drawImage(this.harbor.canvas, 0, 0, VIEW.width, VIEW.height);
     this.surf(this.harbor.coast, game.time, 1);
     this.harborDetails(game.harbor, game.time);
@@ -283,14 +302,156 @@ class Renderer {
       const action = game.interaction;
       if (action?.type === 'land') this.ring(action.landing.x, action.landing.y, 12, '#ffe1a6', game.time);
       this.drawExpedition(game.expedition, game.time);
+      if (game.rescue.stranded) this.drawDistress(game.rescue.stranded, game.time);
     }
     const anchored = game.mode === 'foot';
-    this.drawBoat(game.boat, game.time, anchored, night, waterMask, anchored ? [] : game.cargo);
-    if (anchored) this.drawWalker(game.walker, game.time);
+    this.drawBoat(game.boat, game.time, anchored, waterMask, anchored ? [] : game.cargo, game.rescue.passenger, game.harbor.lanternRange, game.harbor.fittings.has('crane'));
+    if (anchored) this.drawWalker(game.walker, game.time, game.rescue.carrying);
+    const deep = game.deepTarget;
+    if (!anchored && deep && distance(game.boat, deep) < 125) this.ring(deep.x, deep.y, 11, '#a5dedc', game.time);
+    if (game.expedition.hoist) {
+      const { site } = game.expedition.hoist;
+      ctx.strokeStyle = '#e6be7b';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(game.boat.x, game.boat.y);
+      ctx.lineTo(site.x, site.y);
+      ctx.stroke();
+    }
+    this.drawDarkness(game);
+    if (!anchored && deep && distance(game.boat, deep) < 125) this.ring(deep.x, deep.y, 7, '#72a4ae', game.time);
     const target = game.target;
-    if (target?.label === 'Batık kıyı') {
+    if (target?.kind === 'required' && distance(game.walker, target.point) < 125) {
+      this.ring(target.point.x, target.point.y, 12, '#ffcb85', game.time);
+    }
+    if (target?.kind === 'shore') {
       this.ring(target.point.x, target.point.y, 15, '#8fedd7', game.time);
       this.glow(target.point.x, target.point.y, 22, 0.16);
+    }
+  }
+
+  drawDarkness(game) {
+    const ctx = this.darkCtx;
+    const beacon = this.world.lighthouse;
+    const { boat, walker, harbor } = game;
+    ctx.clearRect(0, 0, VIEW.width, VIEW.height);
+    ctx.fillStyle = 'rgba(0, 5, 13, 0.965)';
+    ctx.fillRect(0, 0, VIEW.width, VIEW.height);
+    ctx.globalCompositeOperation = 'destination-out';
+    this.reveal(ctx, beacon, 108);
+    this.lightCone(ctx, beacon, game.time * 0.58, harbor.beam, 0.27, '#fff');
+    this.reveal(ctx, boat, 31);
+    if (harbor.lanternRange) this.lightCone(ctx, this.bow(boat), boat.heading, harbor.lanternRange, 0.48, '#fff');
+
+    // Preserve reading distance for footing, foam and rescue signals on land.
+    if (game.mode === 'foot') {
+      this.reveal(ctx, walker, 112);
+      const stranded = game.rescue.stranded;
+      if (stranded && distance(walker, stranded) < 145) this.reveal(ctx, stranded, 21);
+    }
+    for (const id of harbor.projects) this.reveal(ctx, HARBOR_HOMES[id], 31);
+    for (const building of harbor.structures) this.reveal(ctx, building, building.sprite === 'lamp' ? 48 : 37);
+    ctx.globalCompositeOperation = 'source-over';
+    this.ctx.drawImage(this.darkness, 0, 0);
+  }
+
+  reveal(ctx, { x, y }, radius) {
+    const light = ctx.createRadialGradient(x, y, radius * 0.34, x, y, radius);
+    light.addColorStop(0, '#fff');
+    light.addColorStop(1, '#fff0');
+    ctx.fillStyle = light;
+    ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+  }
+
+  lightCone(ctx, { x, y }, heading, range, spread, color) {
+    const light = ctx.createRadialGradient(x, y, 0, x, y, range);
+    light.addColorStop(0, color);
+    light.addColorStop(0.6, color === '#fff' ? '#ffff' : '#ffd48c32');
+    light.addColorStop(1, '#ffd48c00');
+    ctx.fillStyle = light;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.arc(x, y, range, heading - spread, heading + spread);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  bow(boat) {
+    return { x: boat.x + Math.cos(boat.heading) * 11, y: boat.y + Math.sin(boat.heading) * 11 };
+  }
+
+  drawCrewMember(x, y, color) {
+    const ctx = this.ctx;
+    ctx.fillStyle = '#17232c';
+    ctx.fillRect(x - 3, y + 3, 2, 4);
+    ctx.fillRect(x + 1, y + 3, 2, 4);
+    ctx.fillStyle = color;
+    ctx.fillRect(x - 4, y - 1, 8, 6);
+    this.disc(x, y - 3, 3, '#eac094');
+    ctx.fillStyle = '#3d4548';
+    ctx.fillRect(x - 3, y - 5, 6, 2);
+  }
+
+  drawDistress({ x, y, member }, time) {
+    const beacon = time % 2.8;
+    const signaling = beacon < 0.3 || (beacon > 0.55 && beacon < 0.9);
+    this.ring(x, y, 12, member.color, time);
+    this.drawCrewMember(x, y, member.color);
+    this.glow(x + 6, y - 8, signaling ? 37 : 17, signaling ? 0.72 : 0.19);
+    this.disc(x + 6, y - 8, 2.1, '#fff1c0');
+  }
+
+  drawDistrictConditions(game) {
+    const { tide, time } = game;
+    const ctx = this.ctx;
+    if (tide.exposed) {
+      for (const [tile, kind] of this.world.hazards) {
+        if (this.world.isRaised(tile)) continue;
+        if (kind === 'pool') {
+          this.drawPuddle(tile, time, tide.warning, this.world.wetness(tile, tide.water));
+          continue;
+        }
+        const { x, y } = tile;
+        ctx.fillStyle = kind === 'algae' ? '#638956a6' : '#785745c4';
+        ctx.fillRect(x - 13, y - 13, 26, 26);
+        for (let i = 0; i < 7; i++) {
+          const ox = (i * 13 + tile.col) % 21 - 10;
+          const oy = (i * 9 + tile.row) % 21 - 10;
+          this.disc(x + ox, y + oy, 2.2, kind === 'algae' ? '#a0af688e' : '#432e28a3');
+        }
+      }
+    }
+    for (const tile of this.world.escape) {
+      const { x, y } = tile;
+      if (!this.world.roofs.has(tile)) {
+        ctx.fillStyle = '#514c42';
+        ctx.fillRect(x - 13, y - 10, 26, 24);
+        ctx.fillStyle = '#8a8170';
+        ctx.fillRect(x - 13, y - 13, 26, 23);
+      }
+      // Pale coping marks the continuous dry route back to the landing.
+      ctx.strokeStyle = '#ebd4a8b0';
+      ctx.lineWidth = 1.3;
+      ctx.strokeRect(x - 11, y - 11, 22, 21);
+    }
+  }
+
+  drawPuddle({ x, y }, time, warning, depth) {
+    const ctx = this.ctx;
+    const tremor = warning ? Math.sin(time * 33 + x) * 1.1 : 0;
+    ctx.fillStyle = `rgba(43, 108, 134, ${0.62 + depth * 0.32})`;
+    ctx.beginPath();
+    ctx.ellipse(x + tremor, y, 11 + depth * 4, 6 + depth * 9, -0.15, 0, Math.PI * 2);
+    ctx.fill();
+    if (!warning) return;
+    ctx.strokeStyle = '#c1f1e2bc';
+    ctx.lineWidth = 0.8;
+    for (let i = 0; i < 4; i++) {
+      const bubble = (time * 2.1 + i / 4 + x / 37) % 1;
+      ctx.beginPath();
+      ctx.ellipse(x - 7 + i * 4 + tremor, y + (i % 2) * 3 - bubble * 4,
+        1 + bubble * 2, 0.7 + bubble, 0, 0, Math.PI * 2);
+      ctx.stroke();
     }
   }
 
@@ -410,7 +571,7 @@ class Renderer {
     ctx.beginPath();
     ctx.arc(x, y, 18, Math.PI * 0.12, Math.PI * 1.12);
     ctx.stroke();
-    for (const building of progress.built) {
+    for (const building of progress.structures) {
       if (building.sprite === 'forge') {
         const { x, y } = building;
         ctx.fillStyle = '#111b218a';
@@ -445,6 +606,64 @@ class Renderer {
         this.disc(building.x, building.y, 6, '#f7d293');
       }
     }
+    if (progress.projects.has('diver')) {
+      this.fishingNet(271, 351);
+      this.fishingNet(322, 362);
+    }
+    if (progress.projects.has('shipwright')) {
+      for (const x of [292, 318, 344, 368]) {
+        this.disc(x + 1, 295, 4, '#50382d');
+        this.disc(x, 294, 3, '#c49968');
+      }
+    }
+    for (const id of progress.crew) {
+      const station = CREW_PROJECTS[id];
+      this.drawCrewMember(station.x + 14, id === 'shipwright' ? 350 : station.y + 22, CREW[id].color);
+    }
+    for (const id of progress.projects) this.harborHouse(HARBOR_HOMES[id]);
+  }
+
+  harborHouse({ x, y, roof }) {
+    const ctx = this.ctx;
+    ctx.fillStyle = '#182726a8';
+    ctx.fillRect(x - 13, y - 6, 34, 22);
+    ctx.fillStyle = '#856b51';
+    ctx.fillRect(x - 14, y - 8, 28, 19);
+    ctx.fillStyle = roof;
+    ctx.beginPath();
+    ctx.moveTo(x - 17, y - 2);
+    ctx.lineTo(x - 12, y - 13);
+    ctx.lineTo(x + 12, y - 13);
+    ctx.lineTo(x + 17, y - 2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#eed9b04f';
+    ctx.fillRect(x - 12, y - 12, 24, 1.5);
+    ctx.fillStyle = '#462f29';
+    ctx.fillRect(x - 2, y + 3, 4, 8);
+  }
+
+  fishingNet(x, y) {
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(-0.26);
+    ctx.fillStyle = '#243d40b8';
+    ctx.fillRect(-15, -7, 30, 14);
+    ctx.strokeStyle = '#c3ab7fbe';
+    ctx.lineWidth = 0.7;
+    ctx.beginPath();
+    for (let i = -15; i <= 15; i += 4) {
+      ctx.moveTo(i, -7);
+      ctx.lineTo(i, 7);
+    }
+    for (const offset of [-7, -3, 1, 5, 7]) {
+      ctx.moveTo(-15, offset);
+      ctx.quadraticCurveTo(0, offset + 3, 15, offset);
+    }
+    ctx.stroke();
+    for (const offset of [-13, -6, 6, 13]) this.disc(offset, -7, 1.6, '#e5be89');
+    ctx.restore();
   }
 
   crane(x, y, size) {
@@ -490,8 +709,20 @@ class Renderer {
     ctx.save();
     ctx.clip(waterMask, 'evenodd');
     this.reflect(x, y, 97, night * 0.47, game.time);
-    this.reflect(game.boat.x, game.boat.y, 36, 0.11 + night * 0.57, game.time);
+    const range = game.harbor.lanternRange;
+    const bow = this.bow(game.boat);
+    if (range) this.reflect(bow.x, bow.y, 33, 0.34, game.time);
     ctx.restore();
+    for (const id of game.harbor.projects) {
+      const { x, y } = HARBOR_HOMES[id];
+      this.glow(x, y + 5, 28, 0.27 + night * 0.36);
+      ctx.fillStyle = '#ffcc88';
+      ctx.fillRect(x - 10, y + 2, 5, 4);
+      ctx.fillRect(x + 5, y + 2, 5, 4);
+    }
+    if (game.harbor.tier >= 2 || game.harbor.projects.has('smith')) {
+      this.glow(177, 398, 27, 0.25 + 0.13 * Math.sin(game.time * 3.3));
+    }
     this.glow(x, y, 66 + night * 35, 0.29 + night * 0.46);
     if (night > 0.05) {
       const angle = game.time * 0.58;
@@ -508,7 +739,7 @@ class Renderer {
       }
     }
     this.disc(x, y, 5, '#fff1bc');
-    this.glow(game.boat.x, game.boat.y, 40 + night * 27, 0.2 + night * 0.58);
+    if (range) this.lightCone(ctx, bow, game.boat.heading, range, 0.48, '#ffd48c64');
     for (const building of game.harbor.built) {
       const radius = building.sprite === 'lamp' ? 53 : 32;
       this.glow(building.x, building.y, radius, 0.22 + night * 0.47);
@@ -537,9 +768,9 @@ class Renderer {
     this.disc(x, y, 2, '#fff0b2');
   }
 
-  drawBoat(boat, time, anchored, night, waterMask, cargo) {
+  drawBoat(boat, time, anchored, waterMask, cargo, passenger, lantern, crane) {
     const ctx = this.ctx;
-    const speed = boat.currentSpeed / boat.speed;
+    const speed = clamp(boat.currentSpeed / 210, 0, 1);
     const roll = Math.sin(time * 2.8 + boat.x * 0.014 + boat.y * 0.023);
     if (anchored) this.ring(boat.x, boat.y, 21, '#f3ca8a', time);
     if (boat.moving) {
@@ -552,6 +783,7 @@ class Renderer {
     ctx.translate(boat.x, boat.y);
     ctx.rotate(boat.heading + roll * 0.032);
     ctx.translate(0, roll * 0.8);
+    ctx.scale(1, 1 - boat.draft * 0.22);
 
     ctx.fillStyle = '#02161c91';
     ctx.beginPath();
@@ -592,23 +824,43 @@ class Renderer {
       ctx.fillStyle = '#8d563c';
       ctx.fillRect(x + 1.45, y + 0.05, 0.7, 3.1);
     }
+    if (boat.flood > 0.01) {
+      ctx.fillStyle = 'rgba(30, 104, 126, ' + boat.flood * 0.63 + ')';
+      ctx.fillRect(-12, 4 - boat.flood * 8, 26, 12);
+    }
     ctx.restore();
     ctx.strokeStyle = '#e4c69b';
-    ctx.lineWidth = 1.55;
+    ctx.lineWidth = boat.armor ? 2.5 : 1.55;
+    if (boat.armor) ctx.strokeStyle = '#a9b6bb';
     ctx.stroke(hull);
+    if (crane) {
+      ctx.fillStyle = '#6d4b33';
+      ctx.fillRect(2, -5, 4, 10);
+      ctx.fillStyle = '#f0ba69';
+      ctx.fillRect(3, 2, 8, 1.5);
+    }
     ctx.fillStyle = '#263638';
     ctx.fillRect(-14.5, -2.6, 4, 5.2);
     ctx.fillStyle = '#8daca6';
     ctx.fillRect(-14, -2.4, 0.9, 3.7);
-    this.disc(7, 0, 2.7, '#5c4033');
-    this.disc(7, 0, 1.4 + night * 0.45, '#fff0bc');
+    if (lantern) {
+      this.disc(10, 0, 2.7, '#5c4033');
+      this.disc(10, 0, 1.8, '#fff0bc');
+    }
+    if (passenger) {
+      ctx.save();
+      ctx.translate(2, -2);
+      ctx.scale(0.68, 0.68);
+      this.drawCrewMember(0, 0, passenger.color);
+      ctx.restore();
+    }
     ctx.restore();
   }
 
   drawWake(boat, time, speed) {
     const ctx = this.ctx;
     const length = 8 + speed * 45;
-    const spread = 5 + speed * 10;
+    const spread = 4 + speed * 12 + boat.draft * 4;
     ctx.save();
     ctx.translate(boat.x, boat.y);
     ctx.rotate(Math.atan2(boat.velocityY, boat.velocityX));
@@ -639,11 +891,12 @@ class Renderer {
     ctx.restore();
   }
 
-  drawWalker(walker, time) {
+  drawWalker(walker, time, carrying) {
     const ctx = this.ctx;
     this.glow(walker.x, walker.y, 24, 0.23);
     ctx.save();
-    ctx.translate(walker.x, walker.y);
+    const hop = clamp((time - (walker.hopAt ?? -1)) / 0.27, 0, 1);
+    ctx.translate(walker.x, walker.y - Math.sin(hop * Math.PI) * 5);
     ctx.rotate(walker.heading);
     const pace = walker.moving ? Math.sin(time * 16) * 2.3 : 0;
     ctx.fillStyle = '#14212b';
@@ -657,6 +910,11 @@ class Renderer {
     ctx.fillRect(-4.5, -3, 3, 6);
     this.disc(2.1, 0, 3.6, '#ebb37e');
     this.disc(3.8, -0.2, 1.35, '#fff0c2');
+    if (carrying) {
+      const offset = -5 + pace * 0.4;
+      this.disc(offset, 0, 4, carrying.color);
+      this.disc(offset, -3.8, 2.6, '#eac094');
+    }
     ctx.restore();
   }
 
