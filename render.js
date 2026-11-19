@@ -46,9 +46,10 @@ class Renderer {
     const ctx = this.ctx;
     this.sea = this.paintSea();
     this.darkness = document.createElement('canvas');
-    this.darkness.width = VIEW.width;
-    this.darkness.height = VIEW.height;
+    this.darkness.width = VIEW.width * 2;
+    this.darkness.height = VIEW.height * 2;
     this.darkCtx = this.darkness.getContext('2d');
+    this.darkCtx.scale(2, 2);
     this.vignette = ctx.createRadialGradient(550, 286, 125, 550, 286, 635);
     this.vignette.addColorStop(0, '#04142100');
     this.vignette.addColorStop(1, '#041421a8');
@@ -275,7 +276,7 @@ class Renderer {
     const night = (0.38 + (1 - water) * 0.62) * (0.94 + Math.sin(game.time * 7.1) * 0.035 + Math.sin(game.time * 11.7) * 0.025);
     const waterMask = game.tide.exposed ? district.waterMask : this.openWater;
     ctx.drawImage(this.sea, 0, 0, VIEW.width, VIEW.height);
-    this.waves(game.time, 1);
+
     game.weather.drawWater(ctx, game);
     ctx.globalAlpha = 1 - water * 0.68;
     ctx.drawImage(district.canvas, 0, 0, VIEW.width, VIEW.height);
@@ -285,14 +286,14 @@ class Renderer {
       ctx.clip(district.land);
       ctx.fillStyle = `rgba(54, 122, 145, ${water * 0.2})`;
       ctx.fillRect(0, 0, VIEW.width, VIEW.height);
-      this.waves(game.time, water);
+
       ctx.restore();
     }
-    this.surf(district.coast, game.time, 1 - water * 0.9);
+
     this.drawDistrictConditions(game);
     this.drawLandmarks(game);
     ctx.drawImage(this.harbor.canvas, 0, 0, VIEW.width, VIEW.height);
-    this.surf(this.harbor.coast, game.time, 1);
+
     if (game.map.home) this.harborDetails(game.harbor, game.time);
 
     ctx.fillStyle = `rgba(6, 16, 37, ${night * 0.37})`;
@@ -304,7 +305,7 @@ class Renderer {
     if (game.map.home) this.dockMarker(game.time);
     if (game.tide.exposed) {
       const action = game.interaction;
-      if (action?.type === 'land') this.ring(action.landing.x, action.landing.y, 12, '#ffe1a6', game.time);
+      if (action?.type === 'land') this.salvageGlow(action.landing.x, action.landing.y, 12, '#ffe1a6', game.time);
       this.drawExpedition(game.expedition, game.time);
       if (game.rescue.stranded) this.drawDistress(game.rescue.stranded, game.time);
     }
@@ -312,7 +313,7 @@ class Renderer {
     this.drawBoat(game.boat, game.time, anchored, waterMask, anchored ? [] : game.cargo, game.rescue.passenger, game.harbor.lanternRange, game.harbor.fittings.has('crane'));
     if (anchored) this.drawWalker(game.walker, game.time, game.rescue.carrying);
     const deep = game.deepTarget;
-    if (!anchored && deep && distance(game.boat, deep) < 125) this.ring(deep.x, deep.y, 11, '#a5dedc', game.time);
+    if (!anchored && deep && distance(game.boat, deep) < 125) this.salvageGlow(deep.x, deep.y, 11, '#a5dedc', game.time);
     if (game.expedition.hoist) {
       const { site } = game.expedition.hoist;
       ctx.strokeStyle = '#e6be7b';
@@ -327,13 +328,13 @@ class Renderer {
     game.weather.drawAtmosphere(ctx, game, this.reduced.matches);
     game.sanity.draw(ctx, game, this.reduced.matches);
     game.diving.draw(ctx, game);
-    if (!anchored && deep && distance(game.boat, deep) < 125) this.ring(deep.x, deep.y, 7, '#72a4ae', game.time);
+    if (!anchored && deep && distance(game.boat, deep) < 125) this.salvageGlow(deep.x, deep.y, 7, '#72a4ae', game.time);
     const target = game.target;
     if (target?.kind === 'required' && distance(game.walker, target.point) < 125) {
-      this.ring(target.point.x, target.point.y, 12, '#ffcb85', game.time);
+      this.salvageGlow(target.point.x, target.point.y, 12, '#ffcb85', game.time);
     }
     if (target?.kind === 'shore') {
-      this.ring(target.point.x, target.point.y, 15, '#8fedd7', game.time);
+      this.salvageGlow(target.point.x, target.point.y, 15, '#8fedd7', game.time);
       this.glow(target.point.x, target.point.y, 22, 0.16);
     }
   }
@@ -352,7 +353,6 @@ class Renderer {
       ctx.strokeStyle = '#46555a'; ctx.lineWidth = 2;
       for (let i = 0; i < 5; i++) { ctx.beginPath(); ctx.moveTo(x - 13 - i, y - 22 + i * 10); ctx.lineTo(x + 13 + i, y - 22 + i * 10); ctx.stroke(); }
       this.lightCone(ctx, { x, y }, time * 0.3, 290, 0.18, '#ffd48c64');
-      this.reflect(x, y, 100, 0.3, time);
     }
     if (game.map.region.id === 'cathedral') {
       const x = 815, y = 300;
@@ -369,18 +369,6 @@ class Renderer {
       }
       this.glow(x, y - 24, 42, 0.12 + game.weather.flash * 0.5);
     }
-    // Moonlit, layered swell and warm shore-light refraction share the water mask.
-    ctx.save(); ctx.clip(game.tide.exposed ? this.districtLayer().waterMask : this.openWater, 'evenodd');
-    for (let layer = 0; layer < 3; layer++) {
-      ctx.strokeStyle = ['#02172526', '#527f8d20', '#a2cbcb1c'][layer]; ctx.lineWidth = 4 - layer;
-      ctx.beginPath();
-      for (let row = 0; row < 14; row++) for (let x = 0; x < VIEW.width; x += 12) {
-        const y = row * 49 + Math.sin(x * 0.012 + time * 0.8 + row) * (5 + game.weather.intensity * 5) + layer * 3;
-        if (!x) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-      }
-      ctx.stroke();
-    }
-    ctx.restore();
   }
 
   drawDarkness(game) {
@@ -409,7 +397,7 @@ class Renderer {
     for (const id of (game.map.home ? harbor.projects : [])) this.reveal(ctx, HARBOR_HOMES[id], 31);
     for (const building of (game.map.home ? harbor.structures : [])) this.reveal(ctx, building, building.sprite === 'lamp' ? 48 : 37);
     ctx.globalCompositeOperation = 'source-over';
-    this.ctx.drawImage(this.darkness, 0, 0);
+    this.ctx.drawImage(this.darkness, 0, 0, VIEW.width, VIEW.height);
   }
 
   reveal(ctx, { x, y }, radius) {
@@ -452,7 +440,7 @@ class Renderer {
   drawDistress({ x, y, member }, time) {
     const beacon = time % 2.8;
     const signaling = beacon < 0.3 || (beacon > 0.55 && beacon < 0.9);
-    this.ring(x, y, 12, member.color, time);
+    this.salvageGlow(x, y, 12, member.color, time);
     this.drawCrewMember(x, y, member.color);
     this.glow(x + 6, y - 8, signaling ? 37 : 17, signaling ? 0.72 : 0.19);
     this.disc(x + 6, y - 8, 2.1, '#fff1c0');
@@ -530,13 +518,7 @@ class Renderer {
       ctx.fillStyle = color;
       ctx.fillRect(-2.2, -2.2, 4.4, 4.4);
       ctx.restore();
-      if (!active) continue;
-      ctx.strokeStyle = '#ffe3a7';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      const angle = Math.PI * 2 * trip.opening.elapsed / site.seconds;
-      ctx.arc(x, y, 15, -Math.PI / 2, -Math.PI / 2 + angle);
-      ctx.stroke();
+
     }
   }
 
@@ -548,45 +530,6 @@ class Renderer {
     glow.addColorStop(1, active ? '#ffbd6800' : '#65fade00');
     ctx.fillStyle = glow;
     ctx.fillRect(x - 35, y - 35, 70, 70);
-  }
-
-  waves(time, opacity) {
-    if (opacity < 0.01) return;
-    const ctx = this.ctx;
-    for (const [layer, waves] of this.ripples.entries()) {
-      const light = 0.1 + layer * 0.045;
-      ctx.strokeStyle = `rgba(181, 230, 218, ${opacity * light})`;
-      ctx.lineWidth = 0.7 + layer * 0.2;
-      ctx.beginPath();
-      for (const wave of waves) {
-        const phase = time * (0.65 + layer * 0.17) + wave.offset;
-        const x = wave.x + Math.cos(phase) * (4 + layer * 2);
-        const y = wave.y + Math.sin(phase) * 4;
-        const length = wave.length * (0.65 + 0.35 * Math.cos(phase));
-        ctx.moveTo(x, y);
-        ctx.quadraticCurveTo(x + length * 0.54, y - 2.5, x + length, y - 1);
-      }
-      ctx.stroke();
-    }
-  }
-
-  surf(coast, time, visibility) {
-    const ctx = this.ctx;
-    ctx.lineWidth = 0.85;
-    ctx.lineCap = 'round';
-    ctx.strokeStyle = `rgba(209, 241, 221, ${0.5 * visibility})`;
-    ctx.beginPath();
-    for (const { x1, y1, mx, my, x2, y2, dx, dy, phase } of coast) {
-      const crest = 0.5 + Math.sin(time * 1.8 + phase) * 0.5;
-      if (crest < 0.27) continue;
-      const distance = 3 + crest * 7;
-      const ox = dx * distance;
-      const oy = dy * distance;
-      const inset = crest * 0.18;
-      ctx.moveTo(x1 + (x2 - x1) * inset + ox, y1 + (y2 - y1) * inset + oy);
-      ctx.quadraticCurveTo(mx + ox, my + oy, x2 - (x2 - x1) * inset + ox, y2 - (y2 - y1) * inset + oy);
-    }
-    ctx.stroke();
   }
 
   harborDetails(progress, time) {
@@ -623,11 +566,6 @@ class Renderer {
     this.disc(x - 0.5, y - 0.5, 13, '#a5543c');
     this.disc(x - 1, y - 1, 10.5, '#433a35');
     this.disc(x, y, 8.8, '#d3a56c');
-    ctx.strokeStyle = '#433a35';
-    ctx.lineWidth = 1.6;
-    ctx.beginPath();
-    ctx.arc(x, y, 18, Math.PI * 0.12, Math.PI * 1.12);
-    ctx.stroke();
     for (const building of progress.structures) {
       if (building.sprite === 'forge') {
         const { x, y } = building;
@@ -761,10 +699,8 @@ class Renderer {
     const { x, y } = game.map.home ? this.world.lighthouse : { x: -1000, y: -1000 };
     ctx.save();
     ctx.clip(waterMask, 'evenodd');
-    this.reflect(x, y, 97, night * 0.47, game.time);
     const range = game.harbor.lanternRange;
     const bow = this.bow(game.boat);
-    if (range) this.reflect(bow.x, bow.y, 33, 0.34, game.time);
     ctx.restore();
     for (const id of (game.map.home ? game.harbor.projects : [])) {
       const { x, y } = HARBOR_HOMES[id];
@@ -800,24 +736,9 @@ class Renderer {
     }
   }
 
-  reflect(x, y, radius, brightness, time) {
-    if (brightness < 0.02) return;
-    const ctx = this.ctx;
-    for (let index = 0; index < 22; index++) {
-      const phase = index * 2.4 + time * (0.95 + index * 0.011);
-      const offsetY = (index / 21 - 0.43) * radius * 1.8;
-      const offsetX = Math.sin(phase) * radius * 0.8;
-      const falloff = 1 - Math.hypot(offsetX, offsetY) / radius;
-      if (falloff <= 0) continue;
-      const glint = 0.44 + 0.56 * Math.sin(phase) ** 2;
-      ctx.fillStyle = `rgba(255, 206, 129, ${brightness * falloff * glint})`;
-      ctx.fillRect(x + offsetX, y + offsetY, 4 + radius * 0.34 * falloff, 0.8 + falloff);
-    }
-  }
-
   dockMarker(time) {
     const { x, y } = this.world.dock;
-    this.ring(x, y, 9, '#ffcc82', time);
+    this.salvageGlow(x, y, 9, '#ffcc82', time);
     this.disc(x, y, 2, '#fff0b2');
   }
 
@@ -825,23 +746,12 @@ class Renderer {
     const ctx = this.ctx;
     const speed = clamp(boat.currentSpeed / 210, 0, 1);
     const roll = Math.sin(time * 2.8 + boat.x * 0.014 + boat.y * 0.023);
-    if (anchored) this.ring(boat.x, boat.y, 21, '#f3ca8a', time);
-    if (boat.moving) {
-      ctx.save();
-      ctx.clip(waterMask, 'evenodd');
-      this.drawWake(boat, time, speed);
-      ctx.restore();
-    }
+
     ctx.save();
     ctx.translate(boat.x, boat.y);
     ctx.rotate(boat.heading + roll * 0.032);
     ctx.translate(0, roll * 0.8);
     ctx.scale(1, 1 - boat.draft * 0.22);
-
-    ctx.fillStyle = '#02161c91';
-    ctx.beginPath();
-    ctx.ellipse(-1, 2.5, 15, 9.5, 0, 0, Math.PI * 2);
-    ctx.fill();
 
     const hull = new Path2D();
     hull.moveTo(14.5, 0);
@@ -910,40 +820,6 @@ class Renderer {
     ctx.restore();
   }
 
-  drawWake(boat, time, speed) {
-    const ctx = this.ctx;
-    const length = 8 + speed * 45;
-    const spread = 4 + speed * 12 + boat.draft * 4;
-    ctx.save();
-    ctx.translate(boat.x, boat.y);
-    ctx.rotate(Math.atan2(boat.velocityY, boat.velocityX));
-    const foam = ctx.createLinearGradient(-length - 6, 0, -5, 0);
-    foam.addColorStop(0, '#9bd0c300');
-    foam.addColorStop(0.52, `rgba(149, 210, 197, ${speed * 0.35})`);
-    foam.addColorStop(1, `rgba(223, 246, 226, ${speed * 0.85})`);
-    ctx.strokeStyle = foam;
-    ctx.lineWidth = 1 + speed;
-    ctx.beginPath();
-    for (const side of [-1, 1]) {
-      ctx.moveTo(-4, side * 7);
-      ctx.quadraticCurveTo(-length * 0.48, side * 6, -length, side * spread);
-      ctx.moveTo(-11, side * 4);
-      ctx.quadraticCurveTo(-length * 0.7, side * 3, -length - 5, side * (spread + 3));
-    }
-    ctx.stroke();
-    ctx.lineWidth = 0.7;
-    ctx.beginPath();
-    for (let index = 0; index < 5; index++) {
-      const travel = (time * 4 + index / 5) % 1;
-      const x = -13 - travel * length;
-      const width = (1.8 + travel * 3) * speed;
-      ctx.moveTo(x, -width);
-      ctx.quadraticCurveTo(x - 3, 0, x - 1, width);
-    }
-    ctx.stroke();
-    ctx.restore();
-  }
-
   drawWalker(walker, time, carrying) {
     const ctx = this.ctx;
     this.glow(walker.x, walker.y, 24, 0.23);
@@ -971,17 +847,24 @@ class Renderer {
     ctx.restore();
   }
 
-  ring(x, y, radius, color, time) {
+  salvageGlow(x, y, radius, color, time) {
     const ctx = this.ctx;
-    ctx.strokeStyle = color;
-    ctx.globalAlpha = 0.68 + Math.sin(time * 4) * 0.22;
-    ctx.lineWidth = 1.2;
-    ctx.setLineDash([3, 3]);
-    ctx.beginPath();
-    ctx.arc(x, y, radius, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.globalAlpha = 1;
+    ctx.save();
+    const pulse = 0.19 + Math.sin(time * 1.3 + x * 0.04) * 0.035;
+    const light = ctx.createRadialGradient(x, y, 0, x, y, radius * 2.4);
+    light.addColorStop(0, color + '72'); light.addColorStop(0.3, color + '24'); light.addColorStop(1, color + '00');
+    ctx.globalAlpha = pulse * 2; ctx.fillStyle = light;
+    ctx.fillRect(x - radius * 2.4, y - radius * 2.4, radius * 4.8, radius * 4.8);
+    // Irregular submerged glints; no outlined target geometry.
+    for (let i = 0; i < 4; i++) {
+      const age = (time * 0.24 + i * 0.271) % 1;
+      const bx = x + Math.sin(i * 7.13 + age * 3) * radius * 0.45, by = y - age * 17;
+      const bubble = ctx.createRadialGradient(bx, by, 0, bx, by, 1.8);
+      bubble.addColorStop(0, '#e2f4e899'); bubble.addColorStop(1, '#d8f3e800');
+      ctx.globalAlpha = Math.sin(age * Math.PI) * 0.5;
+      ctx.fillStyle = bubble; ctx.fillRect(bx - 2, by - 2, 4, 4);
+    }
+    ctx.restore();
   }
 
   disc(x, y, radius, color) {

@@ -51,16 +51,16 @@ class WeatherSystem {
     ctx.save();
     for (const trail of this.wake) {
       const age = 3 - trail.life;
-      ctx.strokeStyle = `rgba(170,224,216,${trail.life / 3 * 0.19})`;
-      ctx.lineWidth = 1.5 + age;
-      ctx.beginPath();
-      const spread = 4 + age * (5 + trail.speed / 40);
-      for (const side of [-1, 1]) {
-        ctx.moveTo(trail.x, trail.y);
-        ctx.lineTo(trail.x - Math.cos(trail.heading) * age * 9 + Math.sin(trail.heading) * spread * side,
-          trail.y - Math.sin(trail.heading) * age * 9 - Math.cos(trail.heading) * spread * side);
+      for (let i = 0; i < 5; i++) {
+        const swirl = Math.sin(i * 17.1 + age * 2.1 + trail.x) * (2 + age * 4);
+        const x = trail.x - Math.cos(trail.heading) * (12 + age * 4) + Math.sin(trail.heading) * swirl;
+        const y = trail.y - Math.sin(trail.heading) * (12 + age * 4) - Math.cos(trail.heading) * swirl;
+        const radius = 2 + age * 3 + i * 0.4;
+        const foam = ctx.createRadialGradient(x, y, 0, x, y, radius);
+        foam.addColorStop(0, `rgba(164,210,204,${trail.life / 3 * 0.08})`);
+        foam.addColorStop(1, 'rgba(164,210,204,0)');
+        ctx.fillStyle = foam; ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
       }
-      ctx.stroke();
     }
     ctx.restore();
   }

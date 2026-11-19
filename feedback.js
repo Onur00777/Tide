@@ -38,19 +38,10 @@ class Feedback {
       const spread = rare ? 43 : 24;
       const opacity = 1 - progress;
       ctx.globalAlpha = opacity * 0.78;
-      ctx.strokeStyle = color;
-      ctx.lineWidth = rare ? 2.4 : 1.4;
-      ctx.beginPath();
-      ctx.arc(x, y, 7 + spread * (this.reduced.matches ? 0.2 : progress), 0, Math.PI * 2);
-      ctx.stroke();
-      if (this.reduced.matches) continue;
-      ctx.fillStyle = color;
-      for (let i = 0; i < (rare ? 14 : 7); i++) {
-        const angle = i * 2.4 + effect.start;
-        const radius = 6 + spread * Math.sqrt(progress) * (0.68 + i % 4 * 0.16);
-        const size = (rare ? 3.5 : 2.5) * (0.55 + opacity * 0.45);
-        ctx.fillRect(x + Math.cos(angle) * radius, y + Math.sin(angle) * radius - progress * 9, size, size);
-      }
+      const radius = 12 + spread * Math.sqrt(progress);
+      const bloom = ctx.createRadialGradient(x, y, 0, x, y, radius);
+      bloom.addColorStop(0, color + '55'); bloom.addColorStop(1, color + '00');
+      ctx.fillStyle = bloom; ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
       if (progress < 0.24) {
         ctx.globalAlpha = (1 - progress / 0.24) * (rare ? 0.11 : 0.045);
         ctx.fillStyle = color;

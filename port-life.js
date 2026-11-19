@@ -73,7 +73,7 @@ class PortLife {
     if (this.harbor.contracts.size) {
       const x = 420 + (time * 13 % 650), y = 550 + Math.sin(time * 0.07) * 12;
       ctx.fillStyle = '#ac9270'; ctx.beginPath(); ctx.ellipse(x, y, 19, 7, 0, 0, Math.PI * 2); ctx.fill();
-      renderer.glow(x - 6, y, 25, 0.45); renderer.reflect(x, y, 24, 0.3, time);
+      renderer.glow(x - 6, y, 25, 0.45);
     }
   }
 }
