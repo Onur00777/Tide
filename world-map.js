@@ -90,7 +90,10 @@ class WorldMap {
       }
       const known = [...this.harbor.explored].some(key => key.startsWith(region.id + ':'));
       ctx.fillStyle = known ? '#dfc593' : '#71838a';
-      ctx.font = '72px Georgia'; ctx.fillText(known ? region.name : '???', ox + 45, oy + 315, 1000);
+      ctx.save(); ctx.scale(1 / sx, 1 / sy);
+      ctx.font = (width > 500 ? '16px' : '9px') + ' Georgia';
+      const short = { harbor: 'Liman', oldtown: 'Eski Mahalle', lighthouse: 'Fener Adası', cathedral: 'Katedral' };
+      ctx.fillText(known ? (width > 500 ? region.name : short[region.id]) : '???', (ox + 45) * sx, (oy + 315) * sy, width / 3 - 9); ctx.restore();
       if (region === this.region) for (const gate of this.gates) {
         ctx.fillStyle = this.canEnter(gate.region) ? '#e5bd77' : '#bd6f67';
         ctx.beginPath(); ctx.arc(ox + gate.x, oy + gate.y, 24, 0, Math.PI * 2); ctx.fill();

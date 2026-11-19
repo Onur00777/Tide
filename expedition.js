@@ -113,6 +113,9 @@ class Expedition {
     const uncollected = shuffle(finds.filter(item => !owned.has(item.id) && !cargo.includes(item)));
     const documented = shuffle(finds.filter(item => !uncollected.includes(item)));
     const rewards = [...uncollected, ...documented];
+    // The first progression relic never requires equipment unlocked by that progression.
+    const essential = rewards.findIndex(item => item.id === district.finds[0]);
+    if (essential > 0 && !owned.has(rewards[essential].id)) [rewards[0], rewards[essential]] = [rewards[essential], rewards[0]];
     this.sites = spots.map((tile, index) => ({ ...tile, ...VAULTS[index], item: rewards[index], cellar: index === 3, opened: false }));
   }
 

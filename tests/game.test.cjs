@@ -200,3 +200,30 @@ test('every district supplies four vaults and a reachable cellar over many tides
     assert.equal(expedition.sites.filter(s => s.cellar).length, 1);
   }
 }));
+
+
+test('all vault rewards are reachable on foot from a valid landing without walking through walls', () => scenario(() => {
+  const game = new Game();
+  for (const district of DISTRICTS) {
+    game.world.setDistrict(district.map); game.expedition.district = district;
+    game.expedition.begin(district, new Set(), []);
+    const reachable = new Set(game.world.shore);
+    const queue = [...reachable];
+    for (const tile of queue) for (const next of game.world.district.neighbors(tile)) {
+      if (!reachable.has(next) && game.world.isFootTile(next)) { reachable.add(next); queue.push(next); }
+    }
+    for (const site of game.expedition.sites) {
+      assert.ok([...reachable].some(tile => distance(tile, site) < 35 && game.world.canOccupy(tile.x, tile.y, 6, 'foot', true)));
+    }
+    assert.equal(game.expedition.sites.find(s => s.item.id === district.finds[0]).cellar, false);
+  }
+}));
+
+test('rescued residents cannot be duplicated by revisiting a cached region', () => scenario(() => {
+  const game = new Game(); game.tide.index = 2; game.onPhaseChange(2);
+  game.rescue.stranded = { x: 800, y: 300, member: CREW.smith };
+  let gate = game.map.gates[0]; Object.assign(game.boat, { x:gate.x, y:gate.y }); game.interact();
+  game.harbor.crew.add('smith');
+  gate = game.map.gates.find(g => g.region.id === 'harbor'); Object.assign(game.boat, { x:gate.x, y:gate.y }); game.interact();
+  assert.equal(game.rescue.stranded, null);
+}));

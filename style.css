@@ -190,3 +190,12 @@ kbd { background: #122734; color: #eaf9f6; border: 1px solid #6e969d75; border-r
 .port-contracts p { line-height:1.5; }
 .collection-items p { font:12px/1.6 Georgia,serif; color:#c1c8bb; }
 @media(max-width:700px) { .game[data-docked=true] .sea-atlas { display:none; } }
+
+/* Keep long narrative cues away from the playable centre and cellar readout. */
+.banner { inset:115px auto auto 50%; transform:translateX(-50%); width:min(640px, 88vw); padding:14px 20px; border:1px solid #c5b58338; border-radius:4px; background:#071922e8; }
+.banner::before { display:none; }
+.banner strong, .banner[data-kind='find'] strong, .banner[data-kind='upgrade'] strong { font:500 clamp(16px, 1.6vw, 23px)/1.4 var(--serif); text-transform:none; letter-spacing:0; }
+.banner span { font-size:10px; letter-spacing:2px; }
+.banner:not([hidden]) { animation:none; }
+.task h2 { font-size:clamp(24px, 3.1vw, 45px); }
+@media(max-width:700px) { .banner { top:126px; padding:10px; } .task h2 { font-size:24px; } }

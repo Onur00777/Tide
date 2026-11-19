@@ -5,7 +5,7 @@ class SanitySystem {
   update(dt, game) {
     const actor = game.mode === 'foot' ? game.walker : game.boat;
     this.safe = game.atDock || (game.mode === 'foot' && !game.diving.active && distance(actor, game.boat) < 65)
-      || (game.mode === 'boat' && game.harbor.lanternRange > 0 && game.weather.kind !== 'storm');
+      || (game.mode === 'boat' && game.weather.kind !== 'storm');
     const dark = game.mode === 'foot' && !game.harbor.fittings.has('diveLamp');
     const danger = Number(dark) * 1.3 + Number(game.weather.kind === 'storm') * 1.4
       + Number(game.mode === 'foot' && game.tide.rising) * 3 + Number(Boolean(game.diving.active)) * 1.2;

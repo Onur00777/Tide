@@ -118,6 +118,9 @@ class Game {
   }
 
   get objective() {
+    if (this.diving.active) return this.diving.active.recovered ? 'Buluntu sende · Yüzeye çık' : 'Mahzenin mührünü çöz · Havanı izle';
+    if (this.mode === 'boat' && this.navigation) return 'Seçtiğin deniz geçidine ilerle';
+    if (this.atDock && this.harbor.ending) return 'Son fener yanıyor · Deniz seni hatırlıyor';
     if (this.mode === 'foot') {
       if (this.rescue.carrying) return `${this.rescue.carrying.name} ile tekneye dön`;
       if (this.threat === 'critical') return 'Yüksek rotadan tekneye dön';
@@ -177,7 +180,7 @@ class Game {
     const start = onFoot && this.world.district.tileAt(actor.x, actor.y);
     const canMove = (x, y) => this.world.canOccupy(x, y, actor.radius, this.mode, this.tide.exposed);
     if (onFoot) {
-      actor.move(dx, dy, seconds * this.world.walkingFactor(start, this.tide.water), canMove);
+      actor.move(dx, dy, seconds * (this.harbor.fittings.has('boots') ? Math.max(0.8, this.world.walkingFactor(start, this.tide.water)) : this.world.walkingFactor(start, this.tide.water)), canMove);
     } else {
       const weight = this.cargo.reduce((total, item) => total + (item.weight ?? 1), 0);
       this.boat.load = clamp((weight + (this.rescue.passenger ? 0.55 : 0)) / this.harbor.capacity, 0, 1);
