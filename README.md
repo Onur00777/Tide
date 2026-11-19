@@ -1,57 +1,69 @@
-# TIDE · v1.0
+# Tide — Son Fener
 
-Tide (Gelgit), tam ekran kamerayla oynanan bir kıyı keşif oyunu. Sular çekilince batık mahallelerdeki kasaları aç, buluntuları koleksiyona kat ve limana yeni yapılar kur.
+Canvas 2D ve Web Audio ile çalışan, gece denizciliği ve gelgit keşfi oyunu. Mevcut tekne fiziği, rastgele gelgit süreleri, kurtarma ve ses çekirdeğinin üzerine dört bağlantılı bölge, hava, dalış, panik, görevler ve tamamlanabilir bir hikâye eklendi.
 
 ## Çalıştırma
 
-Bu klasördeki `index.html` dosyasını tarayıcıda aç. Kurulum veya yerel sunucu gerekmez. Cinzel ve Inter yazı tipleri Google Fonts üzerinden yüklenir.
+`npm start` → http://127.0.0.1:57372
+
+Oyunun çalışma zamanı bağımlılığı ve derleme adımı yoktur; `index.html` doğrudan da açılabilir. Yerel kayıtların aynı kökende kalması için sunucuyu kullanmak önerilir. Cinzel ve Inter yüklenemezse sistem yazı tipleri kullanılır.
 
 ## Kontroller
 
-- **WASD** veya **ok tuşları** ile tekneyi ve karakteri hareket ettir.
-- **E** veya ekrandaki etkileşim düğmesiyle karaya çık, kasayı aç, tekneye bin ya da buluntuları indir.
-- Kasayı açarken veya vinçle çekerken yerinde dur. Hareket edersen işlem kesilir.
-- Dokunmatik ekranda yön düğmelerini, **Fren** düğmesini ve ekrandaki etkileşim düğmesini kullan.
-- **Boşluk** ile tekneyi yavaşlat.
-- **R** veya gövde göstergesinin yanındaki düğmeyle tekneyi tamir et.
-- **M** ile konumunu, limanı, yanaşma noktasını ve yüksek dönüş yolunu gösteren haritayı aç.
-- **Esc** ile oyunu duraklat veya sürdür.
-- Üst çubuktan koleksiyonunu açabilirsin. **Ses** düğmesi açık, kısık ve sessiz düzeyleri arasında geçiş yapar. Tercih tarayıcıda saklanır.
-- Deniz, gelgit ve etkileşim sesleri ilk tıklama veya tuş basımından sonra Web Audio API ile üretilir. Oyun duraklatıldığında veya sekme arka plana geçtiğinde ses yumuşakça kesilir.
+- WASD / oklar: hareket. Boşluk: fren. R: tamir. E: bağlama, toplama, kurtarma, vinç, mahzen, bölge geçidi ve teslimat.
+- M: harita. Takımadalar ve **Kıyı ve dönüş yolu** görünümleri arasında geçiş yapılabilir. Esc: duraklat / açık pencereyi kapat.
+- Haritanın altındaki rota düğmesi bir deniz geçidini hedefler. İşarete git, yavaşla ve E ile geç. Geçitler arası ulaşım yükünü ve gelgit zamanını korur.
+- Dokunmatik cihazlarda yönler, fren ve bağlamsal etkileşim düğmesi kullanılabilir.
+- Ses düğmesi açık, kısık ve sessiz arasında geçer. Ses ilk kullanıcı etkileşiminde başlar; duraklama ve arka plan sekmesinde kısılır.
 
-## Sefer
+## İlk sefer ve ilerleme
 
-Çekilme süresi her döngüde değişir. Su birikintileri köpürmeye başladığında kıyı uğultusuna ve ekranın mavi kenarlarına dikkat et. Kasalar, yosun, çamur ve erken dolan çukurlar her döngüde yer değiştirir. Kasalar 5–12 saniyede açılır.
+1. Sular çekilince limanın doğusundaki kıyıya yavaşça yanaş ve E ile karaya çık. Boğulmuş Kaptanın Günlüğü ilk fener geliştirmesini açar. Ana ilerleme eseri ekipman kilitli mahzende üretilmez.
+2. Buluntuları tekneyle iskeleye getirip indir. Liman panelinden yükselt. Fener Sokağı → Eski Tersane → İnci Mahallesi yerel rotaları ilerlemeyle açılır; yeni rota aktif düşük su seferini değiştirmez.
+3. Yardım ışıklarını takip et. Demirci, Fenerci, Tersane Ustası ve Haritacı kurtarıldıklarında limana yerleşir. Uygun üç kurtarma denemesinde en az bir yardım çağrısı üretilir; taşınan yolcu varken yenisi çıkmaz.
+4. Demirci pruva feneri, mercek, motor ve zırh; Fenerci dalış feneri ve çizmeler; Tersane Ustası tekne vinci satar. Atölye projeleri kapasiteyi, ışığı veya hızı artırır. Çizmeler ıslak zemindeki yavaşlamayı da azaltır.
+5. Limandan doğuya **Batık Eski Mahalle**, oradan kuzeye **Kayalık Fener Adası**, adadan doğuya **Yasaklı Batık Katedral** bulunur. Bunlar aynı gelgit saatini paylaşan bağlantılı deniz sektörleridir. Katedral geçidi hem motor hem zırh gerektirir.
+6. Katedralin dört eserini teslim et ve üç ana liman geliştirmesini bitir. Limandaki **Son feneri yak** düğmesi hikâyeyi tamamlar; limana kalıcı şafak gelir. Keşif ve ticarete devam edilebilir.
 
-Yosun ve çamurun etrafından dolaşabilir, su yükselince açık renkli taşlar ve çatılar üzerinden teknene dönebilirsin. Taşkın sırasında suyun içindeki yürüyüş yavaşlar. Su en yüksek seviyeye ulaştığında alçakta kalırsan akıntı bir buluntunu alabilir.
+## Risk ve ödül
 
-İlk rotada Boğulmuş Kaptanın Günlüğü’nü bul. İskelede indirince **Yükselt** düğmesi açılır. Liman atölyesinden feneri, demirciyi ve derin su vincini kur. Atölyedeki rota düğmesiyle açık mahalleler arasında geçiş yap.
+**Hava:** Açık gece, sürüklenen sis ve şimşekli fırtına birbirine geçer. Sis görüşü azaltır; fırtına tekneyi sürükler. Şimşek su altındaki şehrin silüetini ortaya çıkarır. Katedral sürekli fırtınalıdır. Azaltılmış hareket tercihinde parlama şiddeti düşürülür ve halüsinasyon hareketleri kapatılır.
 
-Bazı seferlerde mahallenin içinden bir yardım ışığı gelir. Mahsur kalan kişiye yaklaş ve **E** ile sırtla. Yüksek rotadan tekneye dönüp Başlangıç Limanı'na yanaştığında kurtardığın mürettebat kalıcı olarak yerleşir.
+**Vinç:** Su yüksekken, vinç donanımıyla parlayan ağır kasaya yaklaş ve yavaşla. Çekim beş saniye sürer; dümen kullanımı veya uzaklaşma çekimi keser. Her bölgenin ağır kasası aynı gelgit içinde yalnızca bir kez alınır. Kasalar ağırdır, teknenin yükünü etkiler.
 
-Yerleşen her mürettebat üyesi liman atölyesinde kendi sekmesini açar. Demirci ocağı yük kapasitesini artırır. Fenercinin projesi fenerin ışığını genişletir ve kıyıya balık ağları ekler. Tersane ustası ahşap iskeleyi büyütür, vincini kurar ve tekneyi hızlandırır. Her proje limana ışıklı bir ev ekler.
+**Mahzen:** Her bölgede bir kasa mühürlü mahzendir. Dalış feneri ve çizmelerle, su çekilmişken girilir. Mührün açılması dokuz saniye, hava bütçesi otuz saniyedir. Su yükselirse hava 2,5 kat hızlı tükenir. E ile istediğin an çıkabilirsin. Hava biterse emniyet halatı tekneye çeker: bir yük kaybolur, gövde 15 hasar alır ve panik yükselir.
 
-## Tekne ve atölye
+**Panik:** Karanlık kıyı, fırtına, mahzen ve yükselen su nabzı artırır. Yüksek panikte kalp atışı, fısıltı, gölgeler ve görüş daralması oluşur. Limana, teknenin yakınına veya sakin havada güverteye dönmek paniği azaltır.
 
-Tekne gazı bıraktığında süzülür. Yük, su alma ve kıyı akıntısı dümen tepkisini değiştirir. Kayalara, duvarlara veya iskeleye sert vurursan gövde hasar alır. Limanda tamir ücretsizdir. Açıkta iki hurda gövdeyi 34 puana kadar onarır ve teknede biriken suyu boşaltır. Yeni bir eseri teslim etmek bir hurda kazandırır. Daha önce kayda alınan eserlerin kasaları iki hurda verir.
+**Ekonomi:** Her tam gelgit pazar talebini değiştirir. Hurda teslimatı 1×, 1,5×, 1×, 2× döngüsünde fiyatlanır. Fiyat limanda görünür; teslim anındaki fiyat geçerlidir. Yeni eserler ayrıca kayda alınır. Kurtarılan sakinlerin dört görevi tek seferlik hurda ödülü verir; pusula görevi Fener Adası haritasını açar. Görevler teslimatta veya ilgili kişinin kurtarılışında otomatik değerlendirilir.
 
-Başlangıçta teknede fener yoktur. Demirci sekmesinden hurdayla pruva feneri, daha uzun menzilli mercek, motor ve gövde zırhı takabilirsin. Tersane Ustası sekmesinden tekne vincini alabilirsin. Yüksek suda batık ağır kasaya yaklaş, hızını düşür ve **E** ile vinci çalıştır. Ağır kasa bir yük yuvası kaplar ve dört hurda taşır.
+**Tekne:** Yük, su alma, akıntı ve motor dümen tepkisini etkiler. Sert çarpışmalar gövdeye hasar verir. Limanda tamir ücretsiz; açık denizde iki hurda gövdeyi 34 puan onarır ve suyu boşaltır.
 
-Teslim edilen eserler, limana yerleşen mürettebat, yükseltmeler, hurda stoğu ve gövde durumu tarayıcıda saklanır. Açık sefer ve teslim edilmemiş yük sayfayı yenilediğinde sıfırlanır. Önceki sürümde kaydedilen koleksiyon eserleri aktarılır.
+## Kayıt
 
-## Testler
+Teslim edilen eserler, kurtarılan mürettebat, projeler, donanımlar, hurda, gövde, harita keşfi, pazar döngüsü, görev ödülleri ve final tarayıcıda saklanır. Eski `gelgit.harbor.v2` kayıtları yeni alanlara güvenli varsayılanlarla yüklenir; v1 eserleri de aktarılır.
 
-Oynanış testlerini çalıştırmak için `node --test tests/game.test.cjs` komutunu kullan.
+Açık seferin konumu, panik, hava ve teslim edilmemiş yük kaydedilmez. Yenileme limanda yeni sefer başlatır. Bu nedenle değerli yükü önce teslim et. Aynı seferde bölge değiştirmek açılmış kasaları veya kurtarılmış insanları çoğaltmaz. Kayıt tarayıcı depolamasına bağlıdır.
 
-## Kod yapısı
+## Mimari
 
-- `world.js` harita, çarpışma ve gelgit kurallarını tutar.
-- `expedition.js` mahalleleri, kasa konumlarını ve eserleri tanımlar.
-- `crew.js` mahsur kalan mürettebatı ve tekneye taşıma durumunu yönetir.
-- `progression.js` koleksiyonu, liman yükseltmelerini ve yerel kaydı yönetir.
-- `boat.js` teknenin hareketini, çarpışma hasarını ve su almasını yönetir.
-- `game.js` oynanış etkileşimlerini yürütür.
-- `camera.js` tam ekran takip kamerasını yönetir. `render.js` haritayı ve aktörleri çizer.
-- `audio.js` deniz ambiyansını ve oyun seslerini sentezler.
-- `feedback.js` oyun olaylarını ses ve görsel efektlere dönüştürür.
-- `main.js` klavyeyi, arayüzü ve tarayıcı döngüsünü bağlar.
+Dosyalar `index.html` içindeki sıralı `defer` betikleriyle yüklenir; sınıflar sorumluluklarına göre ayrıdır:
+
+- `WeatherSystem` (`weather.js`): hava geçişleri, rüzgâr, şimşek, sis ve ömürlü tekne izleri.
+- `WorldMap` (`world-map.js`): bölge bağlantıları, geçit kilitleri, sefer önbelleği, keşif ve iki harita görünümü.
+- `SanitySystem`, `DivingSystem` (`sanity.js`): risk, güvenli alanlar, ses olayları, dalış ve tahliye.
+- `PortLife` (`port-life.js`): sakinler, görevler, pazar, günlük metinleri, ticaret ve final.
+- `Renderer` (`render.js`): önbellekli arazi, su, kıyı köpüğü, ışık, mimari ve aktör çizimi.
+- `World`, `Tide` (`world.js`): arazi, çarpışma, akıntı ve rastgele gelgit.
+- `Expedition`, `CrewRescue`, `HarborProgress`, `Boat`: buluntular, kurtarma, kalıcı ilerleme ve fizik.
+- `Game` sistemleri koordine eder. `main.js` giriş ve arayüzü, `camera.js` takip kamerasını, `audio.js` ve `feedback.js` ses/olay geri bildirimini yönetir.
+
+Simülasyon duraklatıldığında hava, dalış, ekonomi ve panik de durur. Çizim rastgele oyun durumunu ilerletmez. Tekne izi listesi ömürle sınırlıdır; arazi çizimleri önbelleklidir.
+
+## Doğrulama
+
+- `npm test`: 15 deterministik oyun testi; eski çekirdek regresyonları, geçitler, tekrar ziyaretler, dalış, panik, tek seferlik ödüller, kayıt, final ve dört bölgenin kasa erişilebilirliği.
+- `npm ci` ardından `npm run test:browser`: Playwright ile masaüstü ve dokunmatik mobil testleri. Yerel Microsoft Edge kullanılır; başka kurulu kanal için `PW_CHANNEL=chrome` seçilebilir.
+- Tarayıcı testleri tüm bölgeleri, hava çizimlerini, dalış ekranını, iki haritayı, günlüğü, kayıt yüklemeyi, finali ve azaltılmış hareket tercihini kontrol eder. Görseller `test-results/` altında oluşturulur; bu çıktı ve bağımlılıklar Git'e alınmaz.
+
+Bu depo oynanabilir tarayıcı oyunudur; Steam paketleme/entegrasyonu içermez. Uzun seans dengesi ve oyuncu değerlendirmesi otomatik testlerden çıkarılamaz; bunlar oyuncu testleriyle ölçülmelidir.
