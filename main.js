@@ -65,6 +65,7 @@ class Hud {
   draw(game, camera) {
     const { tide, harbor, paused } = game;
     const onFoot = game.mode === 'foot';
+    this.ui.game.dataset.docked = String(game.atDock);
     this.ui.game.dataset.tide = tide.rising ? 'rising' : tide.warning ? 'warning' : 'still';
     this.ui.game.style.setProperty('--surge', tide.surge);
     this.text('phase', tide.phase.name);
@@ -75,6 +76,7 @@ class Hud {
     this.text('location', game.atDock ? 'Başlangıç Limanı' : game.expedition.district.name);
     this.text('objective', game.objective);
     this.drawAtlas(game);
+    this.drawPort(game);
     this.drawCargo(game.cargo, harbor.capacity);
     const scrapAtSea = game.onboardScrap;
     this.text('scrap', harbor.scrap || scrapAtSea ? 'Hurda ×' + harbor.scrap + (scrapAtSea ? ' · Yükte +' + scrapAtSea : '') : '');
@@ -204,6 +206,23 @@ class Hud {
     this.text('waypoint-name', target.label);
   }
 
+  drawPort(game) {
+    const panel = document.getElementById('port-contracts');
+    const key = [game.harbor.scrap, game.harbor.marketDay, ...game.harbor.crew, ...game.harbor.contracts].join(':');
+    if (key !== this.contractKey) {
+      this.contractKey = key;
+      const demand = document.createElement('p'); demand.textContent = game.port.demand + ' · Hurda değeri ×' + game.port.price;
+      panel.replaceChildren(demand, ...game.port.contracts.map(contract => {
+        const line = document.createElement('p');
+        line.textContent = game.harbor.contracts.has(contract.id) ? '✓ ' + CREW[contract.crew].name + ' · Söz tamamlandı'
+          : CREW[contract.crew].name + ': ' + contract.text + ' (+' + contract.reward + ' hurda)';
+        return line;
+      }));
+    }
+    const ending = document.getElementById('final-beacon');
+    ending.hidden = !game.port.canEnd || game.harbor.ending;
+  }
+
   drawAtlas(game) {
     document.getElementById('panic-label').textContent = game.sanity.safe ? 'Işıkta güvendesin' : 'Nabız · ' + Math.round(60 + game.sanity.panic);
     document.getElementById('panic-meter').value = game.sanity.panic;
@@ -244,6 +263,7 @@ class Hud {
       symbol.textContent = visible ? item.icon : '◇';
       title.textContent = visible ? item.name : 'Keşfedilmedi';
       card.append(symbol, title);
+      if (harbor.relics.has(item.id)) { const story = document.createElement('p'); story.textContent = RELIC_STORIES[item.id]; card.append(story); }
       return card;
     });
     this.ui['collection-items'].replaceChildren(...cards);
@@ -266,6 +286,7 @@ function togglePause() {
 
 const keyboard = new Keyboard(() => game.interact(), togglePause, () => game.repair(), toggleChart,
   () => collection.open || chart.open, hud.ui['touch-controls']);
+document.getElementById('final-beacon').addEventListener('click', () => game.port.finish(game));
 hud.ui.pause.addEventListener('click', togglePause);
 hud.ui.resume.addEventListener('click', togglePause);
 hud.ui.action.addEventListener('click', () => game.interact());

@@ -25,6 +25,7 @@ function noiseFrom(seed) {
 }
 
 const HARBOR_HOMES = {
+  cartographer: { x: 220, y: 320, roof: '#777393' },
   smith: { x: 140, y: 416, roof: '#975f4b' },
   diver: { x: 198, y: 272, roof: '#6a8782' },
   shipwright: { x: 239, y: 407, roof: '#98754e' },
@@ -321,6 +322,7 @@ class Renderer {
       ctx.stroke();
     }
     this.drawDarkness(game);
+    game.port.draw(this, game);
     game.weather.drawAtmosphere(ctx, game, this.reduced.matches);
     game.sanity.draw(ctx, game, this.reduced.matches);
     game.diving.draw(ctx, game);
@@ -620,10 +622,6 @@ class Renderer {
         this.disc(x + 1, 295, 4, '#50382d');
         this.disc(x, 294, 3, '#c49968');
       }
-    }
-    for (const id of progress.crew) {
-      const station = CREW_PROJECTS[id];
-      this.drawCrewMember(station.x + 14, id === 'shipwright' ? 350 : station.y + 22, CREW[id].color);
     }
     for (const id of progress.projects) this.harborHouse(HARBOR_HOMES[id]);
   }

@@ -36,6 +36,7 @@ class Game {
     this.rescue = new CrewRescue();
     this.harbor = new HarborProgress(saved);
     this.map = new WorldMap(this.harbor);
+    this.port = new PortLife(this.harbor);
     this.world.setHarborExpanded(this.harbor.projects.has('shipwright'));
     this.persist = persist;
     this.loadRoute();
@@ -194,6 +195,7 @@ class Game {
       const member = this.rescue.passenger;
       this.rescue.passenger = null;
       this.harbor.crew.add(member.id);
+      this.port.settle(this);
       this.persist(this.harbor);
       this.signal('delivery', this.world.dock);
       this.announce('MÜRETTEBAT GÜVENDE', `${member.name} limana yerleşti`, 'find', 4);
@@ -260,6 +262,8 @@ class Game {
     }
     if (this.tide.rising && this.mode === 'foot') this.announce('KIYIYA DÖN', 'Su yükseliyor', 'danger', 3.3);
     if (index === 0) {
+      this.harbor.marketDay = (this.harbor.marketDay + 1) % 1000000;
+      this.persist(this.harbor);
       this.map.cache.clear();
       this.expedition.end();
       this.rescue.stranded = null;
@@ -338,11 +342,13 @@ class Game {
 
   archive() {
     this.boat.stop();
-    this.harbor.archive(this.cargo);
+    this.harbor.archive(this.cargo, this.port.price);
     this.cargo = [];
     this.persist(this.harbor);
     this.signal('delivery', this.world.dock);
     this.announce('LİMAN', 'Buluntular güvende', 'find', 2.7);
+    this.port.settle(this);
+    this.persist(this.harbor);
   }
 
   upgrade() {

@@ -184,3 +184,9 @@ kbd { background: #122734; color: #eaf9f6; border: 1px solid #6e969d75; border-r
 @media(max-width:700px) { .sea-atlas { right:10px; bottom:145px; width:180px; padding:8px; } #mini-map { height:80px; } .atlas-heading { font-size:8px; letter-spacing:0; } }
 
 .panic-status { display:flex; justify-content:space-between; gap:8px; align-items:center; font-size:10px; color:#c7b899; margin-bottom:8px; } .panic-status meter { width:90px; height:6px; }
+
+.game[data-docked=true] .sea-atlas { left:28px; right:auto; top:110px; bottom:auto; width:250px; }
+.port-contracts { border-top:1px solid #d2bc8c30; margin-top:10px; padding-top:5px; }
+.port-contracts p { line-height:1.5; }
+.collection-items p { font:12px/1.6 Georgia,serif; color:#c1c8bb; }
+@media(max-width:700px) { .game[data-docked=true] .sea-atlas { display:none; } }

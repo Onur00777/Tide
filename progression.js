@@ -7,6 +7,7 @@ const HARBOR_GOALS = [
 ];
 
 const CREW_PROJECTS = {
+  cartographer: { title: 'Harita Evi', detail: 'Kuzey seferleri ve pusula görevi', x: 220, y: 320, sprite: 'chart' },
   smith: { title: 'Demirci Ocağı', detail: '+1 yük yuvası', x: 177, y: 383, sprite: 'forge' },
   diver: { title: 'Fenerci Ağı', detail: 'Daha geniş fener ışığı ve kıyıda ağlar', x: 255, y: 293, sprite: 'lamp' },
   shipwright: { title: 'Tersane İskelesi', detail: 'Yeni iskele, vinç ve daha hızlı tekne', x: 324, y: 308, sprite: 'crane' },
@@ -37,6 +38,9 @@ class HarborProgress {
     this.fittings = new Set(Object.keys(BOAT_UPGRADES).filter(id =>
       fittings.includes(id) && this.crew.has(BOAT_UPGRADES[id].crew)
       && (!BOAT_UPGRADES[id].requires || fittings.includes(BOAT_UPGRADES[id].requires))));
+    this.contracts = new Set((Array.isArray(saved.contracts) ? saved.contracts : []).filter(id => ['forge','compass','beacon','keel'].includes(id)));
+    this.marketDay = Number.isSafeInteger(saved.marketDay) ? clamp(saved.marketDay, 0, 1000000) : 0;
+    this.ending = saved.ending === true;
     this.explored = new Set((Array.isArray(saved.explored) ? saved.explored : []).filter(key => typeof key === 'string' && /^(harbor|oldtown|lighthouse|cathedral):([0-9]|10):[0-6]$/.test(key)));
     this.hull = Number.isFinite(saved.hull) ? clamp(Math.round(saved.hull), 0, 100) : 100;
   }
@@ -57,9 +61,9 @@ class HarborProgress {
   get boatSpeed() { return (this.built.findLast(goal => goal.speed)?.speed ?? 187) + (this.projects.has('shipwright') ? 18 : 0) + (this.fittings.has('engine') ? 32 : 0); }
   get beam() { return this.built.reduce((radius, goal) => radius + (goal.beam ?? 0), this.projects.has('diver') ? 226 : 197); }
 
-  archive(cargo) {
+  archive(cargo, price = 1) {
     for (const item of cargo) {
-      this.addScrap(item.scrap ?? 1);
+      this.addScrap(item.scrap ? Math.floor(item.scrap * price) : 1);
       if (!item.scrap) this.relics.add(item.id);
     }
   }
@@ -94,7 +98,7 @@ class HarborProgress {
   }
 
   snapshot() {
-    return { explored: [...this.explored], tier: this.tier, route: this.route, relics: [...this.relics], crew: [...this.crew], projects: [...this.projects], hull: this.hull, scrap: this.scrap, fittings: [...this.fittings] };
+    return { contracts: [...this.contracts], marketDay: this.marketDay, ending: this.ending, explored: [...this.explored], tier: this.tier, route: this.route, relics: [...this.relics], crew: [...this.crew], projects: [...this.projects], hull: this.hull, scrap: this.scrap, fittings: [...this.fittings] };
   }
 }
 

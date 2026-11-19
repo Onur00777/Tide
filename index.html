@@ -17,6 +17,7 @@
   <script defer src="weather.js"></script>
   <script defer src="world-map.js"></script>
   <script defer src="sanity.js"></script>
+  <script defer src="port-life.js"></script>
   <script defer src="game.js"></script>
   <script defer src="audio.js"></script>
   <script defer src="feedback.js"></script>
@@ -79,6 +80,8 @@
       <button id="crew-upgrade" class="upgrade" type="button" hidden>İnşa et <span aria-hidden="true">↗</span></button>
       <div id="boat-upgrades" class="boat-upgrades" hidden></div>
       <button id="route" class="route" type="button" hidden></button>
+      <div id="port-contracts" class="port-contracts"></div>
+      <button id="final-beacon" class="upgrade" hidden>Son feneri yak</button>
       <div id="harbor-action" class="harbor-action"></div>
     </section>
 
@@ -105,7 +108,7 @@
     </dialog>
 
     <dialog class="collection glass" id="collection" aria-labelledby="collection-title">
-      <header><h2 id="collection-title">Koleksiyon</h2><form method="dialog"><button type="submit" aria-label="Koleksiyonu kapat">×</button></form></header>
+      <header><h2 id="collection-title">Batık Şehrin Günlüğü</h2><form method="dialog"><button type="submit" aria-label="Koleksiyonu kapat">×</button></form></header>
       <div id="collection-items" class="collection-items"></div>
     </dialog>
   </main>
