@@ -182,3 +182,5 @@ kbd { background: #122734; color: #eaf9f6; border: 1px solid #6e969d75; border-r
 .sea-routes button[aria-pressed=true] { border-color:#e6c183; }
 .sea-atlas small { display:block; margin-top:8px; font-size:9px; color:#91a5a8; }
 @media(max-width:700px) { .sea-atlas { right:10px; bottom:145px; width:180px; padding:8px; } #mini-map { height:80px; } .atlas-heading { font-size:8px; letter-spacing:0; } }
+
+.panic-status { display:flex; justify-content:space-between; gap:8px; align-items:center; font-size:10px; color:#c7b899; margin-bottom:8px; } .panic-status meter { width:90px; height:6px; }

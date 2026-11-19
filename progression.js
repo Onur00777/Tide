@@ -13,6 +13,8 @@ const CREW_PROJECTS = {
 };
 
 const BOAT_UPGRADES = {
+  diveLamp: { crew: 'diver', name: 'Basınca Dayanıklı Dalış Feneri', cost: 5 },
+  boots: { crew: 'diver', name: 'Kurşun Dalış Çizmeleri', cost: 4, requires: 'diveLamp' },
   lantern: { crew: 'smith', name: 'Pruva Feneri', cost: 3 },
   lens: { crew: 'smith', name: 'Uzak Menzil Merceği', cost: 4, requires: 'lantern' },
   engine: { crew: 'smith', name: 'Motor Güçlendirmesi', cost: 5 },

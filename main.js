@@ -205,6 +205,8 @@ class Hud {
   }
 
   drawAtlas(game) {
+    document.getElementById('panic-label').textContent = game.sanity.safe ? 'Işıkta güvendesin' : 'Nabız · ' + Math.round(60 + game.sanity.panic);
+    document.getElementById('panic-meter').value = game.sanity.panic;
     document.getElementById('weather-label').textContent = game.weather.label;
     const canvas = document.getElementById('mini-map');
     if (this.atlasAt === undefined || game.time - this.atlasAt > 0.2) {

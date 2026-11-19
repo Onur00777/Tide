@@ -322,6 +322,8 @@ class Renderer {
     }
     this.drawDarkness(game);
     game.weather.drawAtmosphere(ctx, game, this.reduced.matches);
+    game.sanity.draw(ctx, game, this.reduced.matches);
+    game.diving.draw(ctx, game);
     if (!anchored && deep && distance(game.boat, deep) < 125) this.ring(deep.x, deep.y, 7, '#72a4ae', game.time);
     const target = game.target;
     if (target?.kind === 'required' && distance(game.walker, target.point) < 125) {
@@ -348,7 +350,7 @@ class Renderer {
 
     // Preserve reading distance for footing, foam and rescue signals on land.
     if (game.mode === 'foot') {
-      this.reveal(ctx, walker, 112 * game.weather.visibility);
+      this.reveal(ctx, walker, (game.harbor.fittings.has('diveLamp') ? 165 : 112) * game.weather.visibility);
       const stranded = game.rescue.stranded;
       if (stranded && distance(walker, stranded) < 145) this.reveal(ctx, stranded, 21);
     }

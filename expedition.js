@@ -113,7 +113,7 @@ class Expedition {
     const uncollected = shuffle(finds.filter(item => !owned.has(item.id) && !cargo.includes(item)));
     const documented = shuffle(finds.filter(item => !uncollected.includes(item)));
     const rewards = [...uncollected, ...documented];
-    this.sites = spots.map((tile, index) => ({ ...tile, ...VAULTS[index], item: rewards[index], opened: false }));
+    this.sites = spots.map((tile, index) => ({ ...tile, ...VAULTS[index], item: rewards[index], cellar: index === 3, opened: false }));
   }
 
   rollDeepSite() {

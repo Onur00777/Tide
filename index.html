@@ -16,6 +16,7 @@
   <script defer src="boat.js"></script>
   <script defer src="weather.js"></script>
   <script defer src="world-map.js"></script>
+  <script defer src="sanity.js"></script>
   <script defer src="game.js"></script>
   <script defer src="audio.js"></script>
   <script defer src="feedback.js"></script>
@@ -29,6 +30,7 @@
     <aside class="sea-atlas glass" aria-label="Denizci haritası">
       <div class="atlas-heading"><span>KUZEY TAKIMADALARI</span><span id="weather-label"></span></div>
       <canvas id="mini-map" width="300" height="125" aria-label="Keşfedilen deniz bölgeleri"></canvas>
+      <div class="panic-status"><span id="panic-label">Güvendesin</span><meter id="panic-meter" min="0" max="100" value="0" aria-label="Panik"></meter></div>
       <div id="sea-routes" class="sea-routes"></div>
       <small>Rota seç · İşarete ilerle · E ile geç</small>
     </aside>

@@ -30,6 +30,8 @@ class Game {
     this.world = new World();
     this.tide = new Tide();
     this.weather = new WeatherSystem();
+    this.sanity = new SanitySystem();
+    this.diving = new DivingSystem();
     this.expedition = new Expedition(this.world);
     this.rescue = new CrewRescue();
     this.harbor = new HarborProgress(saved);
@@ -132,6 +134,7 @@ class Game {
   }
 
   get interaction() {
+    if (this.diving.active) return { type: 'surface', label: 'Mahzenden çık · Emniyet halatını çek' };
     if (this.mode === 'foot') {
       if (distance(this.walker, this.boat) < 48 && this.world.hasClearLanding(this.boat, this.walker)) {
         return { type: 'board', label: 'Tekneye bin' };
@@ -144,6 +147,7 @@ class Game {
       const tile = this.world.district.tileAt(this.walker.x, this.walker.y);
       const site = this.tide.exposed && this.world.wetness(tile, this.tide.water) < 0.4
         && !this.rescue.carrying && !this.full && this.expedition.nearest(this.walker, 35);
+      if (site?.cellar) return { type: 'dive', site, label: this.harbor.fittings.has('boots') ? 'Mühürlü mahzene in · 30 sn hava' : 'Mahzen kilitli · Dalış feneri + çizmeler gerekli' };
       return site ? { type: 'open', label: `${site.label} · ${site.seconds} sn`, site } : null;
     }
     const gate = this.map.nearGate(this);
@@ -163,6 +167,9 @@ class Game {
     this.time += seconds;
     this.weather.update(seconds, this);
     this.map.update(seconds, this);
+    this.sanity.update(seconds, this);
+    this.diving.update(seconds, this);
+    if (this.diving.active) { dx = 0; dy = 0; }
     this.tide.advance(seconds, index => this.onPhaseChange(index));
     const actor = this.mode === 'boat' ? this.boat : this.walker;
     const onFoot = this.mode === 'foot';
@@ -269,6 +276,8 @@ class Game {
     if (this.paused) return;
     const action = this.interaction;
     if (!action) return;
+    if (action.type === 'surface') this.diving.active = null;
+    if (action.type === 'dive') this.diving.enter(this, action.site);
     if (action.type === 'travel') this.map.travel(this, action.gate);
     if (action.type === 'board') {
       this.rescue.board();
