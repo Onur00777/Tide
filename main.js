@@ -73,7 +73,7 @@ class Hud {
     this.ui['touch-controls'].hidden = paused;
     this.ui['touch-brake'].hidden = onFoot;
     this.text('mode', onFoot ? 'Yaya' : 'Teknede');
-    this.text('location', game.atDock ? 'Başlangıç Limanı' : game.expedition.district.name);
+    this.text('location', game.atDock ? 'Başlangıç Limanı' : game.map.home ? game.expedition.district.name : game.map.region.name);
     this.text('objective', game.objective);
     this.drawAtlas(game);
     this.drawPort(game);

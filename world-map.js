@@ -50,7 +50,8 @@ class WorldMap {
       game.expedition.sites = cached.sites;
       game.expedition.deepSite = cached.deep;
       world.hazards = new Map(cached.hazards.map(([col, row, kind]) => [world.district.tile(col, row), kind]));
-      game.rescue.stranded = cached.stranded;
+      game.rescue.stranded = cached.stranded && !game.harbor.crew.has(cached.stranded.member.id)
+        && game.rescue.passenger?.id !== cached.stranded.member.id && game.rescue.carrying?.id !== cached.stranded.member.id ? cached.stranded : null;
     } else {
       game.expedition.district = district;
       game.expedition.sites = [];
@@ -80,6 +81,12 @@ class WorldMap {
         if (!this.harbor.explored.has(`${region.id}:${col}:${row}`)) continue;
         ctx.fillStyle = region === this.region ? '#284d55' : '#1d363e';
         ctx.fillRect(ox + col * 100, oy + row * 100, 99, 99);
+      }
+      const patch = region === this.region ? game.world.district : new TilePatch(530, 100, DISTRICTS[region.district].map);
+      for (const tile of patch.tiles) {
+        if (!this.harbor.explored.has(`${region.id}:${Math.floor(tile.x / 100)}:${Math.floor(tile.y / 100)}`)) continue;
+        ctx.fillStyle = tile.type === TERRAIN.rubble ? '#61777a' : '#3f6666';
+        ctx.fillRect(ox + tile.x - 14, oy + tile.y - 14, 27, 27);
       }
       const known = [...this.harbor.explored].some(key => key.startsWith(region.id + ':'));
       ctx.fillStyle = known ? '#dfc593' : '#71838a';

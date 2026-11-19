@@ -272,7 +272,7 @@ class Renderer {
     this.refreshHarbor();
     const district = this.districtLayer();
     const water = game.tide.water;
-    const night = 0.38 + (1 - water) * 0.62;
+    const night = (0.38 + (1 - water) * 0.62) * (0.94 + Math.sin(game.time * 7.1) * 0.035 + Math.sin(game.time * 11.7) * 0.025);
     const waterMask = game.tide.exposed ? district.waterMask : this.openWater;
     ctx.drawImage(this.sea, 0, 0, VIEW.width, VIEW.height);
     this.waves(game.time, 1);
@@ -290,6 +290,7 @@ class Renderer {
     }
     this.surf(district.coast, game.time, 1 - water * 0.9);
     this.drawDistrictConditions(game);
+    this.drawLandmarks(game);
     ctx.drawImage(this.harbor.canvas, 0, 0, VIEW.width, VIEW.height);
     this.surf(this.harbor.coast, game.time, 1);
     if (game.map.home) this.harborDetails(game.harbor, game.time);
@@ -337,15 +338,64 @@ class Renderer {
     }
   }
 
+  drawLandmarks(game) {
+    const ctx = this.ctx, time = game.time;
+    if (game.map.region.id === 'lighthouse') {
+      const x = 780, y = 180;
+      const stone = ctx.createLinearGradient(x - 15, y, x + 15, y);
+      stone.addColorStop(0, '#334650'); stone.addColorStop(0.4, '#b0aa90'); stone.addColorStop(1, '#43545c');
+      ctx.fillStyle = '#07111b66'; ctx.beginPath(); ctx.ellipse(x + 19, y + 25, 40, 14, 0.4, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = stone; ctx.beginPath(); ctx.moveTo(x - 20, y + 23); ctx.lineTo(x - 11, y - 45);
+      ctx.lineTo(x + 11, y - 45); ctx.lineTo(x + 20, y + 23); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#6c4540'; ctx.fillRect(x - 14, y - 46, 28, 9);
+      ctx.fillStyle = '#efcf91'; ctx.fillRect(x - 9, y - 39, 18, 12);
+      ctx.strokeStyle = '#46555a'; ctx.lineWidth = 2;
+      for (let i = 0; i < 5; i++) { ctx.beginPath(); ctx.moveTo(x - 13 - i, y - 22 + i * 10); ctx.lineTo(x + 13 + i, y - 22 + i * 10); ctx.stroke(); }
+      this.lightCone(ctx, { x, y }, time * 0.3, 290, 0.18, '#ffd48c64');
+      this.reflect(x, y, 100, 0.3, time);
+    }
+    if (game.map.region.id === 'cathedral') {
+      const x = 815, y = 300;
+      ctx.fillStyle = '#36404c'; ctx.strokeStyle = '#82969b'; ctx.lineWidth = 1.5;
+      for (const side of [-1, 1]) {
+        const tx = x + side * 93;
+        ctx.beginPath(); ctx.moveTo(tx - 15, y + 35); ctx.lineTo(tx - 15, y - 73);
+        ctx.lineTo(tx, y - 111); ctx.lineTo(tx + 15, y - 73); ctx.lineTo(tx + 15, y + 35); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#93aabb66'; ctx.fillRect(tx - 4, y - 61, 8, 20); ctx.fillStyle = '#36404c';
+      }
+      for (let i = 0; i < 6; i++) {
+        const angle = i * Math.PI / 3;
+        ctx.strokeStyle = '#baadd57a'; ctx.beginPath(); ctx.arc(x + Math.cos(angle) * 12, y - 24 + Math.sin(angle) * 12, 10, 0, Math.PI * 2); ctx.stroke();
+      }
+      this.glow(x, y - 24, 42, 0.12 + game.weather.flash * 0.5);
+    }
+    // Moonlit, layered swell and warm shore-light refraction share the water mask.
+    ctx.save(); ctx.clip(game.tide.exposed ? this.districtLayer().waterMask : this.openWater, 'evenodd');
+    for (let layer = 0; layer < 3; layer++) {
+      ctx.strokeStyle = ['#02172526', '#527f8d20', '#a2cbcb1c'][layer]; ctx.lineWidth = 4 - layer;
+      ctx.beginPath();
+      for (let row = 0; row < 14; row++) for (let x = 0; x < VIEW.width; x += 12) {
+        const y = row * 49 + Math.sin(x * 0.012 + time * 0.8 + row) * (5 + game.weather.intensity * 5) + layer * 3;
+        if (!x) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
   drawDarkness(game) {
     const ctx = this.darkCtx;
     const beacon = this.world.lighthouse;
     const { boat, walker, harbor } = game;
     ctx.clearRect(0, 0, VIEW.width, VIEW.height);
-    ctx.fillStyle = 'rgba(0, 5, 13, 0.965)';
+    ctx.fillStyle = 'rgba(0, 5, 13, 0.86)';
     ctx.fillRect(0, 0, VIEW.width, VIEW.height);
     ctx.globalCompositeOperation = 'destination-out';
-    if (game.map.home) this.reveal(ctx, beacon, 108);
+    if (game.map.home) this.reveal(ctx, beacon, 130 + game.harbor.tier * 25);
+    if (game.map.region.id === 'lighthouse') {
+      this.reveal(ctx, { x: 780, y: 180 }, 85);
+      this.lightCone(ctx, { x: 780, y: 180 }, game.time * 0.3, 290, 0.18, '#fff');
+    }
     if (game.map.home) this.lightCone(ctx, beacon, game.time * 0.58, harbor.beam, 0.27, '#fff');
     this.reveal(ctx, boat, 80 * game.weather.visibility);
     if (harbor.lanternRange) this.lightCone(ctx, this.bow(boat), boat.heading, harbor.lanternRange, 0.48, '#fff');
