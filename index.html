@@ -4,11 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#071920">
-  <title>Tide — Son Fener</title>
+  <title>GELGİT — Son Fener</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="theme.css">
   <script defer src="world.js"></script>
   <script defer src="expedition.js"></script>
   <script defer src="crew.js"></script>
@@ -27,7 +28,7 @@
   <script defer src="main.js"></script>
 </head>
 <body>
-  <main class="game" id="game" aria-label="Tide — Son Fener">
+  <main class="game" id="game" aria-label="GELGİT — Son Fener">
     <canvas class="ocean-surface" id="ocean-gl" aria-hidden="true"></canvas>
     <canvas class="ocean-surface" id="ocean-fallback" aria-hidden="true" hidden></canvas>
     <canvas class="scene" id="sea" aria-label="Gelgit keşif alanı">Canvas destekli bir tarayıcı gerekir.</canvas>
@@ -41,10 +42,11 @@
     <div class="shade" aria-hidden="true"></div>
 
     <header class="top">
-      <div class="brand"><i class="mark" aria-hidden="true"><b></b></i><h1>Tide</h1></div>
+      <div class="brand"><i class="mark" aria-hidden="true"><svg viewBox="0 0 32 44" fill="none"><path d="M16 1L19 18L30 22L19 25L16 43L13 25L2 22L13 18Z" stroke="#d4b886" stroke-width=".7"/><path d="M16 1L16 43M2 22L30 22" stroke="#d4b886" stroke-width=".5"/><path d="M16 1L19 18L16 22Z" fill="#d4b886"/></svg></i><div class="brand-wordmark"><h1>GELGİT</h1><small>SON FENER</small></div></div>
       <section class="tide glass" id="tide" aria-label="Gelgit durumu">
+        <span class="tide-caption">GELGİT SEYRİ</span>
         <div class="tide-readout" id="phase" role="status">Yüksek Su</div>
-        <div class="track" aria-hidden="true"></div>
+        <div class="tide-scale" aria-hidden="true"><i class="tide-needle"></i></div>
       </section>
       <nav class="toolbar" aria-label="Oyun seçenekleri">
         <button id="chart-open" class="glass" type="button" aria-haspopup="dialog" aria-keyshortcuts="M">Harita</button>

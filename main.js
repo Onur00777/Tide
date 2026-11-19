@@ -68,6 +68,7 @@ class Hud {
     this.ui.game.dataset.docked = String(game.atDock);
     this.ui.game.dataset.tide = tide.rising ? 'rising' : tide.warning ? 'warning' : 'still';
     this.ui.game.style.setProperty('--surge', tide.surge);
+    this.ui.game.style.setProperty('--water-level', tide.water);
     this.text('phase', tide.phase.name);
 
     this.ui['touch-controls'].hidden = paused;
