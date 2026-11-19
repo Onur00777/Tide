@@ -14,6 +14,7 @@ class WorldMap {
     this.cache = new Map();
     this.saveIn = 0;
     this.dirty = false;
+    this.paper = new Map();
   }
   get home() { return this.region.id === 'harbor'; }
   get gates() {
@@ -70,8 +71,56 @@ class WorldMap {
     this.update(0, game);
     return true;
   }
+  parchment(ctx, width, height) {
+    const key = width + ':' + height;
+    if (!this.paper.has(key)) {
+      const paper = document.createElement('canvas'); paper.width = width; paper.height = height;
+      const ink = paper.getContext('2d');
+      const wash = ink.createRadialGradient(width * 0.4, height * 0.35, 0, width * 0.5, height * 0.5, width * 0.7);
+      wash.addColorStop(0, '#273636'); wash.addColorStop(0.55, '#192b2d'); wash.addColorStop(1, '#101e24');
+      ink.fillStyle = wash; ink.fillRect(0, 0, width, height);
+      // Fixed paper grain never flickers or consumes simulation randomness.
+      let seed = 6137;
+      const random = () => ((seed = Math.imul(seed, 1664525) + 1013904223 >>> 0) / 4294967296);
+      for (let i = 0; i < width * height / 5; i++) {
+        ink.fillStyle = random() > 0.5 ? '#cbbd8810' : '#030e1418';
+        ink.fillRect(random() * width, random() * height, 0.6 + random(), 0.5 + random());
+      }
+      ink.strokeStyle = '#d4b88617'; ink.lineWidth = 0.6;
+      ink.beginPath();
+      for (let i = 1; i < 8; i++) {
+        const x = width * i / 8;
+        ink.moveTo(x, 0); ink.bezierCurveTo(x + (width / 2 - x) * 0.12, height / 3, x + (width / 2 - x) * 0.12, height * 2 / 3, x, height);
+      }
+      for (let i = 1; i < 5; i++) { const y = height * i / 5; ink.moveTo(0, y); ink.quadraticCurveTo(width / 2, y + (height / 2 - y) * 0.12, width, y); }
+      ink.stroke();
+      ink.strokeStyle = '#d4b88624'; ink.strokeRect(4.5, 4.5, width - 9, height - 9);
+      ink.font = (width > 500 ? '10px' : '6px') + ' Georgia'; ink.fillStyle = '#c4b58b77';
+      for (let i = 1; i < 5; i++) ink.fillText((42 + i) + '°', 7, height * i / 5 - 3);
+      this.paper.set(key, paper);
+    }
+    ctx.drawImage(this.paper.get(key), 0, 0);
+  }
+
+  compass(ctx, width, height) {
+    const size = width > 500 ? 31 : 17, x = width - size * 2, y = height - size * 1.8;
+    ctx.save(); ctx.translate(x, y); ctx.strokeStyle = '#c9b58270'; ctx.lineWidth = 0.6;
+    ctx.beginPath(); ctx.arc(0, 0, size * 0.82, 0, Math.PI * 2); ctx.stroke();
+    for (let i = 0; i < 8; i++) {
+      ctx.save(); ctx.rotate(i * Math.PI / 4);
+      const length = i % 2 ? size * 0.62 : size;
+      ctx.beginPath(); ctx.moveTo(0, -length); ctx.lineTo(size * 0.15, 0); ctx.lineTo(0, size * 0.18); ctx.closePath();
+      ctx.fillStyle = i % 2 ? '#827c5b' : '#c4b17f'; ctx.fill();
+      ctx.beginPath(); ctx.moveTo(0, -length); ctx.lineTo(-size * 0.15, 0); ctx.lineTo(0, size * 0.18); ctx.closePath();
+      ctx.fillStyle = '#34433e'; ctx.fill(); ctx.restore();
+    }
+    ctx.font = (width > 500 ? '11px' : '8px') + ' Georgia'; ctx.textAlign = 'center'; ctx.fillStyle = '#d4c198';
+    ctx.fillText('K', 0, -size - 5); ctx.fillText('G', 0, size + 10);
+    ctx.fillText('B', -size - 6, 3); ctx.fillText('D', size + 6, 3); ctx.restore();
+  }
+
   drawLocal(ctx, game, width, height) {
-    ctx.fillStyle = '#081c25'; ctx.fillRect(0, 0, width, height);
+    this.parchment(ctx, width, height);
     ctx.save(); ctx.scale(width / VIEW.width, height / VIEW.height);
     const visible = point => this.harbor.explored.has(`${this.region.id}:${Math.floor(point.x / 100)}:${Math.floor(point.y / 100)}`);
     for (const patch of [game.world.harbor, game.world.district]) for (const tile of patch.tiles) {
@@ -97,28 +146,28 @@ class WorldMap {
 
   draw(ctx, game, width, height) {
     ctx.clearRect(0, 0, width, height);
-    ctx.fillStyle = '#081c25'; ctx.fillRect(0, 0, width, height);
+    this.parchment(ctx, width, height);
     const sx = width / (VIEW.width * 3), sy = height / (VIEW.height * 2);
     ctx.save(); ctx.scale(sx, sy);
     for (const region of SEA_REGIONS) {
       const ox = region.col * VIEW.width, oy = region.row * VIEW.height;
       for (let row = 0; row < 7; row++) for (let col = 0; col < 11; col++) {
         if (!this.harbor.explored.has(`${region.id}:${col}:${row}`)) continue;
-        ctx.fillStyle = region === this.region ? '#284d55' : '#1d363e';
-        ctx.fillRect(ox + col * 100, oy + row * 100, 99, 99);
+        ctx.fillStyle = region === this.region ? '#74877327' : '#6c7b6b19';
+        ctx.fillRect(ox + col * 100, oy + row * 100, 100, 100);
       }
       const patch = region === this.region ? game.world.district : new TilePatch(530, 100, DISTRICTS[region.district].map);
       for (const tile of patch.tiles) {
         if (!this.harbor.explored.has(`${region.id}:${Math.floor(tile.x / 100)}:${Math.floor(tile.y / 100)}`)) continue;
-        ctx.fillStyle = tile.type === TERRAIN.rubble ? '#61777a' : '#3f6666';
+        ctx.fillStyle = tile.type === TERRAIN.rubble ? '#a29c7a88' : '#81927b66';
         ctx.fillRect(ox + tile.x - 14, oy + tile.y - 14, 27, 27);
       }
       const known = [...this.harbor.explored].some(key => key.startsWith(region.id + ':'));
-      ctx.fillStyle = known ? '#dfc593' : '#71838a';
+      ctx.fillStyle = known ? '#d9c69b' : '#9b9b7a88';
       ctx.save(); ctx.scale(1 / sx, 1 / sy);
       ctx.font = (width > 500 ? '16px' : '9px') + ' Georgia';
       const short = { harbor: 'Liman', oldtown: 'Eski Mahalle', lighthouse: 'Fener Adası', cathedral: 'Katedral' };
-      ctx.fillText(known ? (width > 500 ? region.name : short[region.id]) : '???', (ox + 45) * sx, (oy + 315) * sy, width / 3 - 9); ctx.restore();
+      ctx.fillText(known ? (width > 500 ? region.name : short[region.id]) : 'Bilinmeyen', (ox + 45) * sx, (oy + 315) * sy, width / 3 - 9); ctx.restore();
       if (region === this.region) for (const gate of this.gates) {
         ctx.fillStyle = this.canEnter(gate.region) ? '#e5bd77' : '#bd6f67';
         ctx.beginPath(); ctx.arc(ox + gate.x, oy + gate.y, 24, 0, Math.PI * 2); ctx.fill();
@@ -129,6 +178,6 @@ class WorldMap {
     ctx.rotate(actor.heading);
     ctx.fillStyle = '#fff2c6'; ctx.beginPath(); ctx.moveTo(36, 0); ctx.lineTo(-22, -19); ctx.lineTo(-22, 19); ctx.closePath(); ctx.fill();
     ctx.restore();
-    ctx.fillStyle = '#e4cfa6'; ctx.font = '11px Georgia'; ctx.fillText('N ↑', width - 30, 16);
+    this.compass(ctx, width, height);
   }
 }

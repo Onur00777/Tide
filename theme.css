@@ -87,3 +87,17 @@ button:focus-visible { outline:1px solid #e5d0a3; outline-offset:4px; }
   .action { font-size:10px; }
 }
 @media(prefers-reduced-motion:reduce) { button { transition:none; } }
+
+/* A chart folio: corner bindings, ink, paper and restrained cartographic furniture. */
+.sea-atlas.glass { background:radial-gradient(ellipse at 30% 0%,#39423940,transparent 70%),linear-gradient(135deg,#17282bea,#0b1c23f2); border-color:#d4b88642; border-radius:1px; padding:15px; box-shadow:0 12px 30px #0005,inset 0 0 22px #0003; }
+.sea-atlas::before, .sea-atlas::after { content:''; position:absolute; pointer-events:none; width:14px; height:14px; border-color:#d4b88690; }
+.sea-atlas::before { left:-1px; top:-1px; border-left:2px solid; border-top:2px solid; color:#ae976b; }
+.sea-atlas::after { right:-1px; bottom:-1px; border-right:2px solid; border-bottom:2px solid; color:#ae976b; }
+.atlas-heading { font-family:var(--serif); font-size:9px; letter-spacing:.11em; color:#c6b58e; padding-bottom:8px; border-bottom:1px solid #d4b88620; }
+#weather-label { font:italic 12px/1.1 var(--display); letter-spacing:.02em; color:#a6b6aa; text-align:right; }
+#mini-map { border:1px solid #d4b88619; margin:10px 0; filter:drop-shadow(0 2px 5px #0003); }
+.panic-status { color:#a9b7a6; font:11px var(--display); letter-spacing:.035em; }
+.sea-atlas small { color:#82938c; font:italic 11px var(--display); letter-spacing:.02em; }
+.sea-routes button { padding:7px 9px; font-size:10px; line-height:1.4; }
+.chart .sea-routes { margin-bottom:16px; }
+@media(max-width:700px) { .sea-atlas.glass { padding:10px; } .atlas-heading { font-size:7px; } #weather-label { font-size:10px; } .sea-routes button { font-size:8px; padding:6px; } }
