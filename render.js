@@ -34,6 +34,7 @@ class Renderer {
   constructor(canvas, world) {
     this.ctx = canvas.getContext('2d');
     this.world = world;
+    this.reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
     const random = randomFrom(4172);
     this.ripples = [96, 120, 108].map(count => Array.from({ length: count }, () => ({
       x: random() * VIEW.width, y: random() * VIEW.height,
@@ -274,6 +275,7 @@ class Renderer {
     const waterMask = game.tide.exposed ? district.waterMask : this.openWater;
     ctx.drawImage(this.sea, 0, 0, VIEW.width, VIEW.height);
     this.waves(game.time, 1);
+    game.weather.drawWater(ctx, game);
     ctx.globalAlpha = 1 - water * 0.68;
     ctx.drawImage(district.canvas, 0, 0, VIEW.width, VIEW.height);
     ctx.globalAlpha = 1;
@@ -319,6 +321,7 @@ class Renderer {
       ctx.stroke();
     }
     this.drawDarkness(game);
+    game.weather.drawAtmosphere(ctx, game, this.reduced.matches);
     if (!anchored && deep && distance(game.boat, deep) < 125) this.ring(deep.x, deep.y, 7, '#72a4ae', game.time);
     const target = game.target;
     if (target?.kind === 'required' && distance(game.walker, target.point) < 125) {
@@ -340,12 +343,12 @@ class Renderer {
     ctx.globalCompositeOperation = 'destination-out';
     this.reveal(ctx, beacon, 108);
     this.lightCone(ctx, beacon, game.time * 0.58, harbor.beam, 0.27, '#fff');
-    this.reveal(ctx, boat, 31);
+    this.reveal(ctx, boat, 80 * game.weather.visibility);
     if (harbor.lanternRange) this.lightCone(ctx, this.bow(boat), boat.heading, harbor.lanternRange, 0.48, '#fff');
 
     // Preserve reading distance for footing, foam and rescue signals on land.
     if (game.mode === 'foot') {
-      this.reveal(ctx, walker, 112);
+      this.reveal(ctx, walker, 112 * game.weather.visibility);
       const stranded = game.rescue.stranded;
       if (stranded && distance(walker, stranded) < 145) this.reveal(ctx, stranded, 21);
     }

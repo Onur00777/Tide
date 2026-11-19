@@ -5,6 +5,7 @@ const SOUND_KEY = 'gelgit.sound';
 
 // Tones describe start/end pitch, onset, duration, peak gain and attack in seconds.
 const AUDIO_EVENTS = {
+  thunder: { noise: [2.6, 0.17, 0.12, 180], tones: [[43, 25, 0, 2.8, 0.09, 0.18]], gap: 5 },
   retreat: { tones: [[59, 43, 0, 3.4, 0.085, 0.75], [89, 56, 0.25, 3.1, 0.036, 0.85]] },
   undertow: { tones: [[42, 55, 0, 3.1, 0.092, 0.82], [66, 77, 0.35, 2.9, 0.033, 0.65]] },
   rising: { tones: [[48, 61, 0, 3.7, 0.104, 0.8], [82, 97, 0.3, 3.1, 0.038, 0.78]] },

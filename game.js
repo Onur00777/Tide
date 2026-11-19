@@ -29,6 +29,7 @@ class Game {
   constructor(saved, persist = () => {}) {
     this.world = new World();
     this.tide = new Tide();
+    this.weather = new WeatherSystem();
     this.expedition = new Expedition(this.world);
     this.rescue = new CrewRescue();
     this.harbor = new HarborProgress(saved);
@@ -150,6 +151,7 @@ class Game {
   update(seconds, dx, dy, braking = false) {
     if (this.paused) return;
     this.time += seconds;
+    this.weather.update(seconds, this);
     this.tide.advance(seconds, index => this.onPhaseChange(index));
     const actor = this.mode === 'boat' ? this.boat : this.walker;
     const onFoot = this.mode === 'foot';
@@ -162,6 +164,8 @@ class Game {
       this.boat.load = clamp((weight + (this.rescue.passenger ? 0.55 : 0)) / this.harbor.capacity, 0, 1);
       this.hoistCrate(seconds, !braking && Boolean(dx || dy));
       const current = this.expedition.hoist ? { x: 0, y: 0 } : this.world.currentAt(this.boat, this.tide);
+      const wind = this.weather.current(this.time);
+      current.x += wind.x; current.y += wind.y;
       this.boat.move(dx, dy, seconds, current, canMove, damage => this.onImpact(damage), braking);
     }
     if (onFoot) {
