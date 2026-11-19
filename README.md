@@ -1,6 +1,6 @@
-# Tide — Son Fener
+# GELGİT — Son Fener
 
-Canvas 2D ve Web Audio ile çalışan, gece denizciliği ve gelgit keşfi oyunu. Mevcut tekne fiziği, rastgele gelgit süreleri, kurtarma ve ses çekirdeğinin üzerine dört bağlantılı bölge, hava, dalış, panik, görevler ve tamamlanabilir bir hikâye eklendi.
+WebGL okyanus, Canvas 2D oyun katmanı ve Web Audio ile çalışan, gece denizciliği ve gelgit keşfi oyunu. Mevcut tekne fiziği, rastgele gelgit süreleri, kurtarma ve ses çekirdeğinin üzerine dört bağlantılı bölge, hava, dalış, panik, görevler ve tamamlanabilir bir hikâye eklendi.
 
 ## Çalıştırma
 
@@ -53,17 +53,21 @@ Dosyalar `index.html` içindeki sıralı `defer` betikleriyle yüklenir; sınıf
 - `WorldMap` (`world-map.js`): bölge bağlantıları, geçit kilitleri, sefer önbelleği, keşif ve iki harita görünümü.
 - `SanitySystem`, `DivingSystem` (`sanity.js`): risk, güvenli alanlar, ses olayları, dalış ve tahliye.
 - `PortLife` (`port-life.js`): sakinler, görevler, pazar, günlük metinleri, ticaret ve final.
-- `Renderer` (`render.js`): önbellekli arazi, su, kıyı köpüğü, ışık, mimari ve aktör çizimi.
+- `OceanSurface` (`water.js`): kamera ile aynı dünya koordinatlarında GLSL simplex/FBM deniz, yükseklikten türetilen normaller, dinamik ışık yansımaları, kıyı uzaklık dokusu, köpük ve türbülanslı tekne izleri. WebGL yoksa veya bağlam kaybolursa 550×310 prosedürel CPU yüzeyine geçer; bağlam geri geldiğinde GPU kaynakları yeniden kurulur.
+- `Renderer` (`render.js`): şeffaf oyun katmanı, önbellekli arazi, yumuşak buluntu parıltıları, ışık, mimari ve aktör çizimi. Eski kesik çemberler, çizgi dalgaları ve V biçimli izler kaldırıldı.
+- `theme.css`: GELGİT tipografisi, pirinç çerçeveli deniz camı bileşenleri ve ibreli gelgit göstergesi. Harita dokusu ve pusula gülü `WorldMap` tarafından çizilir.
 - `World`, `Tide` (`world.js`): arazi, çarpışma, akıntı ve rastgele gelgit.
 - `Expedition`, `CrewRescue`, `HarborProgress`, `Boat`: buluntular, kurtarma, kalıcı ilerleme ve fizik.
 - `Game` sistemleri koordine eder. `main.js` giriş ve arayüzü, `camera.js` takip kamerasını, `audio.js` ve `feedback.js` ses/olay geri bildirimini yönetir.
+
+GPU yüzeyi en fazla 1,1 milyon piksel çizer; köpük geçmişi 24 GPU örneğiyle sınırlıdır. CPU fallback dokusu 12 Hz, kamera yeniden projeksiyonu her karede güncellenir. Kıyı uzaklık alanı yalnızca bölge/harita değiştiğinde hesaplanır.
 
 Simülasyon duraklatıldığında hava, dalış, ekonomi ve panik de durur. Çizim rastgele oyun durumunu ilerletmez. Tekne izi listesi ömürle sınırlıdır; arazi çizimleri önbelleklidir.
 
 ## Doğrulama
 
 - `npm test`: 15 deterministik oyun testi; eski çekirdek regresyonları, geçitler, tekrar ziyaretler, dalış, panik, tek seferlik ödüller, kayıt, final ve dört bölgenin kasa erişilebilirliği.
-- `npm ci` ardından `npm run test:browser`: Playwright ile masaüstü ve dokunmatik mobil testleri. Yerel Microsoft Edge kullanılır; başka kurulu kanal için `PW_CHANNEL=chrome` seçilebilir.
-- Tarayıcı testleri tüm bölgeleri, hava çizimlerini, dalış ekranını, iki haritayı, günlüğü, kayıt yüklemeyi, finali ve azaltılmış hareket tercihini kontrol eder. Görseller `test-results/` altında oluşturulur; bu çıktı ve bağımlılıklar Git'e alınmaz.
+- `npm ci` ardından `npm run test:browser`: Playwright ile dört masaüstü/dokunmatik mobil ve WebGL/fallback testi. Test sunucusu 57373 portunda çalışır; açık oyun önizlemesini etkilemez. Yerel Microsoft Edge kullanılır; başka kurulu kanal için `PW_CHANNEL=chrome` seçilebilir.
+- Tarayıcı testleri tüm bölgeleri, hava çizimlerini, dalış ekranını, iki haritayı, günlüğü, kayıt yüklemeyi, finali ve azaltılmış hareket tercihini kontrol eder. GPU testleri shader derlemesini, piksel çıktısını, kamera hizalamasını, resize ve bağlam kaybı/geri dönüşünü doğrular; WebGL kapatılarak CPU fallback de denenir. Görseller `test-results/` altında oluşturulur; bu çıktı ve bağımlılıklar Git'e alınmaz.
 
 Bu depo oynanabilir tarayıcı oyunudur; Steam paketleme/entegrasyonu içermez. Uzun seans dengesi ve oyuncu değerlendirmesi otomatik testlerden çıkarılamaz; bunlar oyuncu testleriyle ölçülmelidir.
