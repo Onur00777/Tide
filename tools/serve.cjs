@@ -12,4 +12,4 @@ http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': ({'.js':'text/javascript','.css':'text/css','.html':'text/html'})[path.extname(file)] + '; charset=utf-8', 'Cache-Control':'no-store' });
     res.end(req.method === 'HEAD' ? undefined : data);
   });
-}).listen(57372, '127.0.0.1', () => console.log('Tide: http://127.0.0.1:57372'));
+}).listen(Number(process.env.TIDE_PORT || 57372), '127.0.0.1', () => console.log('Gelgit: http://127.0.0.1:' + (process.env.TIDE_PORT || 57372)));

@@ -36,15 +36,10 @@ class Renderer {
     this.ctx = canvas.getContext('2d');
     this.world = world;
     this.reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const random = randomFrom(4172);
-    this.ripples = [96, 120, 108].map(count => Array.from({ length: count }, () => ({
-      x: random() * VIEW.width, y: random() * VIEW.height,
-      length: 8 + random() * 27, offset: random() * Math.PI * 2,
-    })));
     this.districtLayers = new Map();
     this.refreshHarbor();
     const ctx = this.ctx;
-    this.sea = this.paintSea();
+
     this.darkness = document.createElement('canvas');
     this.darkness.width = VIEW.width * 2;
     this.darkness.height = VIEW.height * 2;
@@ -74,32 +69,6 @@ class Renderer {
     layer.waterMask.addPath(layer.land);
     this.districtLayers.set(patch.rows, layer);
     return layer;
-  }
-
-  paintSea() {
-    const canvas = document.createElement('canvas');
-    canvas.width = VIEW.width / 2;
-    canvas.height = VIEW.height / 2;
-    const ctx = canvas.getContext('2d');
-    const image = ctx.createImageData(canvas.width, canvas.height);
-    const noise = noiseFrom(9712);
-    for (let y = 0; y < canvas.height; y++) {
-      for (let x = 0; x < canvas.width; x++) {
-        const sandbank = noise(x / 88, y / 58);
-        const current = noise((x + y * 0.55) / 80, y / 19);
-        const ripples = noise((x - y * 1.3) / 16, y / 4.5);
-        const depth = sandbank * 0.66 + current * 0.26 + ripples * 0.08;
-        const caustic = noise((x + y * 0.45) / 25, y / 11);
-        const sparkle = Math.max(0, ripples - 0.61) * (16 + caustic * 21);
-        const i = (y * canvas.width + x) * 4;
-        image.data[i] = 4 + depth * 37 + sparkle;
-        image.data[i + 1] = 22 + depth * 99 + sparkle;
-        image.data[i + 2] = 42 + depth * 90 + sparkle;
-        image.data[i + 3] = 255;
-      }
-    }
-    ctx.putImageData(image, 0, 0);
-    return canvas;
   }
 
   paintPatch(patch, district) {
@@ -136,12 +105,6 @@ class Renderer {
       land.closePath();
     }
     ctx.lineCap = 'round';
-    for (const [width, color] of [[42, '#57b7a014'], [27, '#65c6a625'], [15, '#75c1a34a'], [6, '#142b2e8c']]) {
-      ctx.lineWidth = width;
-      ctx.strokeStyle = color;
-      ctx.stroke(edge);
-    }
-
     ctx.save();
     ctx.clip(land);
     const soil = ctx.createLinearGradient(patch.x, patch.y, patch.x + 180, patch.y + 325);
@@ -203,10 +166,10 @@ class Renderer {
       if (tile.type === TERRAIN.rubble || tile.type === TERRAIN.door) this.ruin(ctx, tile, patch, roll);
     }
     ctx.strokeStyle = district ? '#d1ba8b4f' : '#cbb88d87';
-    ctx.lineWidth = 10;
+    ctx.lineWidth = 2;
     ctx.stroke(edge);
     ctx.strokeStyle = '#f7dfae87';
-    ctx.lineWidth = 1.8;
+    ctx.lineWidth = 0.65;
     ctx.stroke(edge);
     ctx.restore();
     return { canvas, land, coast };
@@ -275,9 +238,9 @@ class Renderer {
     const water = game.tide.water;
     const night = (0.38 + (1 - water) * 0.62) * (0.94 + Math.sin(game.time * 7.1) * 0.035 + Math.sin(game.time * 11.7) * 0.025);
     const waterMask = game.tide.exposed ? district.waterMask : this.openWater;
-    ctx.drawImage(this.sea, 0, 0, VIEW.width, VIEW.height);
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height); ctx.restore();
 
-    game.weather.drawWater(ctx, game);
+
     ctx.globalAlpha = 1 - water * 0.68;
     ctx.drawImage(district.canvas, 0, 0, VIEW.width, VIEW.height);
     ctx.globalAlpha = 1;
@@ -376,7 +339,7 @@ class Renderer {
     const beacon = this.world.lighthouse;
     const { boat, walker, harbor } = game;
     ctx.clearRect(0, 0, VIEW.width, VIEW.height);
-    ctx.fillStyle = game.harbor.ending && game.map.home ? 'rgba(13,25,38,0.25)' : 'rgba(0, 5, 13, 0.86)';
+    ctx.fillStyle = game.harbor.ending && game.map.home ? 'rgba(13,25,38,0.25)' : 'rgba(0, 5, 13, 0.30)';
     ctx.fillRect(0, 0, VIEW.width, VIEW.height);
     ctx.globalCompositeOperation = 'destination-out';
     if (game.map.home) this.reveal(ctx, beacon, 130 + game.harbor.tier * 25);

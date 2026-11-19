@@ -277,6 +277,7 @@ const game = new Game(ProgressSave.load(), harbor => ProgressSave.write(harbor))
 const canvas = document.getElementById('sea');
 const renderer = new Renderer(canvas, game.world);
 const camera = new Camera(canvas, game.boat);
+const ocean = new OceanSurface(document.getElementById('ocean-gl'), document.getElementById('ocean-fallback'), renderer);
 const feedback = new Feedback();
 const hud = new Hud();
 const { collection, chart } = hud.ui;
@@ -357,6 +358,7 @@ function frame(now) {
   game.update(seconds, keyboard.dx, keyboard.dy, keyboard.braking);
   feedback.update(game);
   camera.follow(game, seconds);
+  ocean.draw(game, camera);
   camera.apply(renderer.ctx);
   renderer.draw(game);
   feedback.draw(renderer.ctx, game.time);

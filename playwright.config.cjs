@@ -1,2 +1,2 @@
 const { defineConfig } = require('@playwright/test');
-module.exports = defineConfig({ testDir: './tests/browser', workers: 1, use: { baseURL: 'http://127.0.0.1:57372', channel: process.env.PW_CHANNEL || 'msedge', headless: true, viewport: { width: 1440, height: 900 } }, webServer: { command: 'node tools/serve.cjs', url: 'http://127.0.0.1:57372', reuseExistingServer: false } });
+module.exports = defineConfig({ testDir: './tests/browser', workers: 1, use: { baseURL: 'http://127.0.0.1:57373', channel: process.env.PW_CHANNEL || 'msedge', headless: true, viewport: { width: 1440, height: 900 } }, webServer: { command: 'node tools/serve.cjs', env: { TIDE_PORT: '57373' }, url: 'http://127.0.0.1:57373', reuseExistingServer: false } });

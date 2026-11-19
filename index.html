@@ -22,11 +22,14 @@
   <script defer src="audio.js"></script>
   <script defer src="feedback.js"></script>
   <script defer src="render.js"></script>
+  <script defer src="water.js"></script>
   <script defer src="camera.js"></script>
   <script defer src="main.js"></script>
 </head>
 <body>
   <main class="game" id="game" aria-label="Tide — Son Fener">
+    <canvas class="ocean-surface" id="ocean-gl" aria-hidden="true"></canvas>
+    <canvas class="ocean-surface" id="ocean-fallback" aria-hidden="true" hidden></canvas>
     <canvas class="scene" id="sea" aria-label="Gelgit keşif alanı">Canvas destekli bir tarayıcı gerekir.</canvas>
     <aside class="sea-atlas glass" aria-label="Denizci haritası">
       <div class="atlas-heading"><span>KUZEY TAKIMADALARI</span><span id="weather-label"></span></div>
