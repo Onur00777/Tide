@@ -249,7 +249,10 @@ class Hud {
   drawChart(game) {
     this.text('chart-location', game.map.region.name + ' · ' + game.weather.label + ' · Altın noktalar deniz geçitleri');
     const canvas = this.ui['chart-map'];
-    game.map.draw(canvas.getContext('2d'), game, canvas.width, canvas.height);
+    game.map[this.localChart ? 'drawLocal' : 'draw'](canvas.getContext('2d'), game, canvas.width, canvas.height);
+    document.getElementById('chart-atlas').setAttribute('aria-pressed', String(!this.localChart));
+    document.getElementById('chart-local').setAttribute('aria-pressed', String(Boolean(this.localChart)));
+    if (this.localChart) this.text('chart-location', game.map.region.name + ' · Açık yeşil: yüksek dönüş yolu · Mor: mahzen · Altın: kasa / geçit');
   }
 
   drawCollection(harbor) {
@@ -336,6 +339,8 @@ function toggleChart() {
   else openOverlay(chart, () => hud.drawChart(game));
 }
 
+document.getElementById('chart-atlas').addEventListener('click', () => { hud.localChart = false; hud.drawChart(game); });
+document.getElementById('chart-local').addEventListener('click', () => { hud.localChart = true; hud.drawChart(game); });
 hud.ui['chart-open'].addEventListener('click', toggleChart);
 hud.ui['collection-open'].addEventListener('click', () => openOverlay(collection, () => hud.drawCollection(game.harbor)));
 for (const dialog of [collection, chart]) {

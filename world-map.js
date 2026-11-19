@@ -70,6 +70,31 @@ class WorldMap {
     this.update(0, game);
     return true;
   }
+  drawLocal(ctx, game, width, height) {
+    ctx.fillStyle = '#081c25'; ctx.fillRect(0, 0, width, height);
+    ctx.save(); ctx.scale(width / VIEW.width, height / VIEW.height);
+    const visible = point => this.harbor.explored.has(`${this.region.id}:${Math.floor(point.x / 100)}:${Math.floor(point.y / 100)}`);
+    for (const patch of [game.world.harbor, game.world.district]) for (const tile of patch.tiles) {
+      if (!visible(tile)) continue;
+      ctx.fillStyle = patch === game.world.harbor ? '#897657' : game.world.escape.has(tile) ? '#a9c48d' : game.world.isFootTile(tile) ? '#466d74' : '#273d4a';
+      ctx.fillRect(tile.x - 13, tile.y - 13, 26, 26);
+    }
+    for (const site of game.expedition.sites) if (visible(site) && !site.opened) {
+      ctx.strokeStyle = site.cellar ? '#b7a1d7' : '#d9b57a'; ctx.lineWidth = 2;
+      ctx.strokeRect(site.x - 6, site.y - 6, 12, 12);
+    }
+    for (const gate of this.gates) {
+      ctx.fillStyle = this.canEnter(gate.region) ? '#e7c38c' : '#b36f71';
+      ctx.beginPath(); ctx.arc(gate.x, gate.y, 8, 0, Math.PI * 2); ctx.fill();
+      ctx.font = '12px Georgia'; ctx.textAlign = gate.x > 900 ? 'right' : 'left';
+      ctx.fillText(gate.region.name, gate.x > 900 ? gate.x - 14 : gate.x + 14, gate.y + 4);
+    }
+    for (const [point, color] of [[game.boat, '#dfbd86'], [game.mode === 'foot' ? game.walker : game.boat, '#f8eed1']]) {
+      ctx.fillStyle = color; ctx.beginPath(); ctx.arc(point.x, point.y, 6, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  }
+
   draw(ctx, game, width, height) {
     ctx.clearRect(0, 0, width, height);
     ctx.fillStyle = '#081c25'; ctx.fillRect(0, 0, width, height);

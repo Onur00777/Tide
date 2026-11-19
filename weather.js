@@ -18,7 +18,8 @@ class WeatherSystem {
   update(dt, game) {
     this.remaining -= dt;
     const forbidden = game.map?.region.id === 'cathedral';
-    if (forbidden) this.kind = 'storm';
+    if (game.map?.home && game.harbor.ending) { this.kind = 'clear'; this.flash = 0; }
+    else if (forbidden) this.kind = 'storm';
     else if (this.remaining <= 0) {
       const choices = ['clear', 'fog', 'storm'].filter(kind => kind !== this.kind);
       this.kind = choices[Math.floor(this.random() * choices.length)];

@@ -388,7 +388,7 @@ class Renderer {
     const beacon = this.world.lighthouse;
     const { boat, walker, harbor } = game;
     ctx.clearRect(0, 0, VIEW.width, VIEW.height);
-    ctx.fillStyle = 'rgba(0, 5, 13, 0.86)';
+    ctx.fillStyle = game.harbor.ending && game.map.home ? 'rgba(13,25,38,0.25)' : 'rgba(0, 5, 13, 0.86)';
     ctx.fillRect(0, 0, VIEW.width, VIEW.height);
     ctx.globalCompositeOperation = 'destination-out';
     if (game.map.home) this.reveal(ctx, beacon, 130 + game.harbor.tier * 25);

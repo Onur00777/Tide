@@ -199,3 +199,13 @@ kbd { background: #122734; color: #eaf9f6; border: 1px solid #6e969d75; border-r
 .banner:not([hidden]) { animation:none; }
 .task h2 { font-size:clamp(24px, 3.1vw, 45px); }
 @media(max-width:700px) { .banner { top:126px; padding:10px; } .task h2 { font-size:24px; } }
+
+@media(pointer:coarse) and (max-width:700px) {
+  .sea-atlas { width:162px; bottom:160px; }
+  .sea-atlas small { display:none; }
+  #mini-map { height:68px; }
+  .task { max-width:52vw; }
+  .task h2 { font-size:21px; }
+}
+
+@media(max-width:700px) { .task h2 { overflow-wrap:anywhere; } .panic-status > span { white-space:nowrap; } .panic-status meter { min-width:40px; } }

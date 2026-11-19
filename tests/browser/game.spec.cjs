@@ -4,6 +4,8 @@ test('desktop renders every weather and region, survives reload, opens journal a
   await page.goto('/'); await expect(page.locator('#weather-label')).toHaveText('Açık gece');
   await page.screenshot({ path: 'test-results/harbor.png' });
   await page.keyboard.press('m'); await expect(page.locator('#chart')).toBeVisible();
+  await page.locator('#chart-local').click(); await expect(page.locator('#chart-local')).toHaveAttribute('aria-pressed', 'true');
+  await page.locator('#chart-atlas').click();
   await page.keyboard.press('Escape'); await expect(page.locator('#chart')).not.toBeVisible();
   await page.evaluate(() => {
     game.harbor.crew = new Set(Object.keys(CREW)); game.harbor.projects = new Set(Object.keys(CREW));
@@ -38,7 +40,9 @@ test('desktop renders every weather and region, survives reload, opens journal a
   expect(errors).toEqual([]);
 });
 
-test('mobile layout and reduced-motion rendering remain usable', async ({ page }) => {
+test.describe('touch devices', () => {
+  test.use({ hasTouch: true, isMobile: true });
+ test('mobile layout and reduced-motion rendering remain usable', async ({ page }) => {
   const errors = []; page.on('pageerror', e => errors.push(e.message));
   await page.setViewportSize({ width: 390, height: 844 }); await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/'); await expect(page.locator('#chart-open')).toBeVisible();
@@ -48,4 +52,6 @@ test('mobile layout and reduced-motion rendering remain usable', async ({ page }
   await page.evaluate(() => { game.boat.x = 460; game.weather.kind = 'storm'; game.weather.flash = 1; });
   await page.waitForTimeout(100); await page.screenshot({ path: 'test-results/mobile-sea.png' });
   expect(errors).toEqual([]);
+});
+
 });
