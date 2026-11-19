@@ -33,6 +33,7 @@ class Game {
     this.expedition = new Expedition(this.world);
     this.rescue = new CrewRescue();
     this.harbor = new HarborProgress(saved);
+    this.map = new WorldMap(this.harbor);
     this.world.setHarborExpanded(this.harbor.projects.has('shipwright'));
     this.persist = persist;
     this.loadRoute();
@@ -59,6 +60,7 @@ class Game {
   }
 
   loadRoute() {
+    if (!this.map.home) return;
     const district = this.nextDistrict;
     if (district === this.expedition.district && this.expedition.deepSite) return;
     const recovered = this.expedition.deepSite?.opened;
@@ -69,8 +71,8 @@ class Game {
     if (recovered && this.expedition.deepSite) this.expedition.deepSite.opened = true;
   }
 
-  get nextDistrict() { return DISTRICTS[this.harbor.route]; }
-  get atDock() { return this.mode === 'boat' && distance(this.boat, this.world.dock) < 52; }
+  get nextDistrict() { return DISTRICTS[this.map.home ? this.harbor.route : this.map.region.district]; }
+  get atDock() { return this.map.home && this.mode === 'boat' && distance(this.boat, this.world.dock) < 52; }
   get landing() { return this.mode === 'boat' && this.tide.exposed && !this.tide.rising ? this.world.landingNear(this.boat) : null; }
   get canDisembark() { return this.boat.currentSpeed <= 42; }
   get full() { return this.cargo.length >= this.harbor.capacity; }
@@ -87,6 +89,8 @@ class Game {
   }
 
   get target() {
+    const gate = this.map.gates.find(g => g.region.id === this.navigation);
+    if (this.mode === 'boat' && gate) return { point: gate, label: gate.region.name, kind: 'shore' };
     if (this.mode === 'foot') {
       if (this.rescue.carrying || this.full || this.threat === 'critical') return { point: this.boat, label: 'Tekne', kind: 'home' };
       const survivor = this.rescue.stranded;
@@ -97,6 +101,10 @@ class Game {
       if (required) return { point: required, label: 'Liman buluntusu', kind: 'required' };
       const site = this.expedition.nearest(this.walker);
       return site ? { point: site, label: 'Kasa', kind: 'vault' } : { point: this.boat, label: 'Tekne', kind: 'home' };
+    }
+    if (!this.map.home && (this.rescue.passenger || this.cargo.length || this.harbor.ready)) {
+      const gate = this.map.gates.find(g => g.region.id === 'harbor') ?? this.map.gates.find(g => g.region.id === 'oldtown') ?? this.map.gates[0];
+      return { point: gate, label: 'Liman rotası', kind: 'home' };
     }
     if (this.rescue.passenger || this.cargo.length || this.harbor.ready) return { point: this.world.dock, label: 'Liman', kind: 'home' };
     if (this.deepTarget && !this.full) return { point: this.deepTarget, label: 'Batık ağır kasa', kind: 'vault' };
@@ -138,6 +146,8 @@ class Game {
         && !this.rescue.carrying && !this.full && this.expedition.nearest(this.walker, 35);
       return site ? { type: 'open', label: `${site.label} · ${site.seconds} sn`, site } : null;
     }
+    const gate = this.map.nearGate(this);
+    if (gate) return { type: 'travel', gate, label: this.map.canEnter(gate.region) ? (this.boat.currentSpeed > 42 ? 'Geçiş için yavaşla' : gate.region.name + ' · Yelken aç') : 'Fırtına geçidi · Zırh + motor gerekli' };
     if (this.atDock && this.cargo.length) return { type: 'archive', label: 'Buluntuları indir' };
     const deep = this.deepTarget;
     if (this.expedition.hoist) return null;
@@ -152,6 +162,7 @@ class Game {
     if (this.paused) return;
     this.time += seconds;
     this.weather.update(seconds, this);
+    this.map.update(seconds, this);
     this.tide.advance(seconds, index => this.onPhaseChange(index));
     const actor = this.mode === 'boat' ? this.boat : this.walker;
     const onFoot = this.mode === 'foot';
@@ -229,6 +240,7 @@ class Game {
 
   onPhaseChange(index) {
     if (index === 2) {
+      this.map.cache.clear();
       const district = this.mode === 'foot' ? this.expedition.district : this.nextDistrict;
       this.expedition.begin(district, this.harbor.relics, this.cargo);
       this.rescue.begin(this.world, this.harbor.crew, this.expedition.sites);
@@ -241,6 +253,7 @@ class Game {
     }
     if (this.tide.rising && this.mode === 'foot') this.announce('KIYIYA DÖN', 'Su yükseliyor', 'danger', 3.3);
     if (index === 0) {
+      this.map.cache.clear();
       this.expedition.end();
       this.rescue.stranded = null;
       if (this.mode === 'foot') {
@@ -256,6 +269,7 @@ class Game {
     if (this.paused) return;
     const action = this.interaction;
     if (!action) return;
+    if (action.type === 'travel') this.map.travel(this, action.gate);
     if (action.type === 'board') {
       this.rescue.board();
       this.mode = 'boat';

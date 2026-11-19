@@ -173,3 +173,12 @@ kbd { background: #122734; color: #eaf9f6; border: 1px solid #6e969d75; border-r
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; }
 }
+
+.sea-atlas { position:absolute; z-index:4; right:24px; bottom:85px; width:300px; padding:14px; border:1px solid #b6ae7b38; border-radius:4px; }
+.atlas-heading { display:flex; justify-content:space-between; gap:12px; font-size:9px; letter-spacing:1.2px; color:#d3bd93; }
+#mini-map { width:100%; height:125px; margin:8px 0; }
+.sea-routes { display:flex; flex-wrap:wrap; gap:5px; }
+.sea-routes button { background:#163039; color:#dcd1b6; border:1px solid #b6ae7b38; border-radius:3px; padding:7px; font-size:10px; cursor:pointer; }
+.sea-routes button[aria-pressed=true] { border-color:#e6c183; }
+.sea-atlas small { display:block; margin-top:8px; font-size:9px; color:#91a5a8; }
+@media(max-width:700px) { .sea-atlas { right:10px; bottom:145px; width:180px; padding:8px; } #mini-map { height:80px; } .atlas-heading { font-size:8px; letter-spacing:0; } }

@@ -62,6 +62,16 @@ const DISTRICTS = [
   },
 ];
 
+DISTRICTS.push({ name: 'Yasaklı Batık Katedral', finds: ['bell', 'vow', 'heart', 'chorus'], map: [
+  '       .......', '     ...##.##...', '    ....##.##....', '   ...............',
+  '  ....###...###....', ' .....#D#...#D#....', ' .................',
+  ' ....##..+++..##...', ' ....##..+++..##...', ' .......+++++......',
+  '  ...###..D..###..', '   ..###.....###..', '    .............', '      .........',
+] });
+for (const [id, name] of [['bell', 'Sessiz Çanın Dili'], ['vow', 'Son Fenercinin Yemini'], ['heart', 'Gelgitin Kalbi'], ['chorus', 'İsimsizlerin Korosu']]) {
+  RELICS[id] = { id, name, kind: 'Sır', icon: '✦', color: '#b8a4ed' };
+}
+
 const VAULTS = [
   { label: 'Kapıcı Kasası', seconds: 5 },
   { label: 'Mühürlü Sandık', seconds: 7 },

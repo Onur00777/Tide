@@ -15,6 +15,7 @@
   <script defer src="progression.js"></script>
   <script defer src="boat.js"></script>
   <script defer src="weather.js"></script>
+  <script defer src="world-map.js"></script>
   <script defer src="game.js"></script>
   <script defer src="audio.js"></script>
   <script defer src="feedback.js"></script>
@@ -25,6 +26,12 @@
 <body>
   <main class="game" id="game" aria-label="Gelgit">
     <canvas class="scene" id="sea" aria-label="Gelgit keşif alanı">Canvas destekli bir tarayıcı gerekir.</canvas>
+    <aside class="sea-atlas glass" aria-label="Denizci haritası">
+      <div class="atlas-heading"><span>KUZEY TAKIMADALARI</span><span id="weather-label"></span></div>
+      <canvas id="mini-map" width="300" height="125" aria-label="Keşfedilen deniz bölgeleri"></canvas>
+      <div id="sea-routes" class="sea-routes"></div>
+      <small>Rota seç · İşarete ilerle · E ile geç</small>
+    </aside>
     <div class="shade" aria-hidden="true"></div>
 
     <header class="top">

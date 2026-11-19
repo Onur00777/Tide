@@ -6,7 +6,7 @@ const { join } = require('node:path');
 const { test } = require('node:test');
 const { createContext, runInContext } = require('node:vm');
 
-const scripts = ['world', 'expedition', 'crew', 'progression', 'boat', 'weather', 'game'].map(name => {
+const scripts = ['world', 'expedition', 'crew', 'progression', 'boat', 'weather', 'world-map', 'game'].map(name => {
   const filename = name + '.js';
   return { filename, source: readFileSync(join(__dirname, '..', filename), 'utf8') };
 });

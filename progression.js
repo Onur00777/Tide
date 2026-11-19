@@ -35,10 +35,11 @@ class HarborProgress {
     this.fittings = new Set(Object.keys(BOAT_UPGRADES).filter(id =>
       fittings.includes(id) && this.crew.has(BOAT_UPGRADES[id].crew)
       && (!BOAT_UPGRADES[id].requires || fittings.includes(BOAT_UPGRADES[id].requires))));
+    this.explored = new Set((Array.isArray(saved.explored) ? saved.explored : []).filter(key => typeof key === 'string' && /^(harbor|oldtown|lighthouse|cathedral):([0-9]|10):[0-6]$/.test(key)));
     this.hull = Number.isFinite(saved.hull) ? clamp(Math.round(saved.hull), 0, 100) : 100;
   }
 
-  get maxRoute() { return Math.min(this.tier, DISTRICTS.length - 1); }
+  get maxRoute() { return Math.min(this.tier, 2); }
   get built() { return HARBOR_GOALS.slice(0, this.tier); }
   get structures() {
     const bySprite = new Map(this.built.map(goal => [goal.sprite, goal]));
@@ -91,7 +92,7 @@ class HarborProgress {
   }
 
   snapshot() {
-    return { tier: this.tier, route: this.route, relics: [...this.relics], crew: [...this.crew], projects: [...this.projects], hull: this.hull, scrap: this.scrap, fittings: [...this.fittings] };
+    return { explored: [...this.explored], tier: this.tier, route: this.route, relics: [...this.relics], crew: [...this.crew], projects: [...this.projects], hull: this.hull, scrap: this.scrap, fittings: [...this.fittings] };
   }
 }
 

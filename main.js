@@ -74,6 +74,7 @@ class Hud {
     this.text('mode', onFoot ? 'Yaya' : 'Teknede');
     this.text('location', game.atDock ? 'Başlangıç Limanı' : game.expedition.district.name);
     this.text('objective', game.objective);
+    this.drawAtlas(game);
     this.drawCargo(game.cargo, harbor.capacity);
     const scrapAtSea = game.onboardScrap;
     this.text('scrap', harbor.scrap || scrapAtSea ? 'Hurda ×' + harbor.scrap + (scrapAtSea ? ' · Yükte +' + scrapAtSea : '') : '');
@@ -203,32 +204,31 @@ class Hud {
     this.text('waypoint-name', target.label);
   }
 
+  drawAtlas(game) {
+    document.getElementById('weather-label').textContent = game.weather.label;
+    const canvas = document.getElementById('mini-map');
+    if (this.atlasAt === undefined || game.time - this.atlasAt > 0.2) {
+      game.map.draw(canvas.getContext('2d'), game, canvas.width, canvas.height);
+      this.atlasAt = game.time;
+    }
+    const key = game.map.region.id + ':' + [...game.harbor.fittings].join(',');
+    if (key !== this.routeKey) {
+      this.routeKey = key;
+      document.getElementById('sea-routes').replaceChildren(...game.map.gates.map(gate => {
+        const button = document.createElement('button');
+        button.textContent = gate.region.name + (game.map.canEnter(gate.region) ? '' : ' 🔒');
+        button.addEventListener('click', () => { game.navigation = gate.region.id; });
+        return button;
+      }));
+    }
+    [...document.getElementById('sea-routes').children].forEach((button, index) =>
+      button.setAttribute('aria-pressed', String(game.navigation === game.map.gates[index].region.id)));
+  }
+
   drawChart(game) {
-    const { world, tide } = game;
-    this.text('chart-location', game.expedition.district.name + ' · ' + tide.phase.name);
+    this.text('chart-location', game.map.region.name + ' · ' + game.weather.label + ' · Altın noktalar deniz geçitleri');
     const canvas = this.ui['chart-map'];
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#071c2a';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    const size = VIEW.tile;
-    for (const tile of world.harbor.tiles) {
-      ctx.fillStyle = tile.type === TERRAIN.pier ? '#c08c62' : '#625d4b';
-      ctx.fillRect(tile.x - size / 2, tile.y - size / 2, size, size);
-    }
-    for (const tile of world.district.tiles) {
-      ctx.fillStyle = world.escape.has(tile) ? '#80b078' : tide.exposed
-        ? (world.isFootTile(tile) ? '#496778' : '#283d4a') : '#1d3647';
-      ctx.fillRect(tile.x - size / 2 + 1, tile.y - size / 2 + 1, size - 2, size - 2);
-    }
-    const pins = [[world.dock, '#ffbc78', 13], [world.shoreTarget, '#87eddb', 12],
-      [game.boat, '#a8bcc4', 9], [game.mode === 'foot' ? game.walker : game.boat, '#fff3cc', 10]];
-    for (const [point, color, radius] of pins) {
-      if (!point) continue;
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
-      ctx.fill();
-    }
+    game.map.draw(canvas.getContext('2d'), game, canvas.width, canvas.height);
   }
 
   drawCollection(harbor) {

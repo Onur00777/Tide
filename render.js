@@ -291,7 +291,7 @@ class Renderer {
     this.drawDistrictConditions(game);
     ctx.drawImage(this.harbor.canvas, 0, 0, VIEW.width, VIEW.height);
     this.surf(this.harbor.coast, game.time, 1);
-    this.harborDetails(game.harbor, game.time);
+    if (game.map.home) this.harborDetails(game.harbor, game.time);
 
     ctx.fillStyle = `rgba(6, 16, 37, ${night * 0.37})`;
     ctx.fillRect(0, 0, VIEW.width, VIEW.height);
@@ -299,7 +299,7 @@ class Renderer {
     ctx.fillRect(0, 0, VIEW.width, VIEW.height);
 
     this.lights(game, night, waterMask);
-    this.dockMarker(game.time);
+    if (game.map.home) this.dockMarker(game.time);
     if (game.tide.exposed) {
       const action = game.interaction;
       if (action?.type === 'land') this.ring(action.landing.x, action.landing.y, 12, '#ffe1a6', game.time);
@@ -341,8 +341,8 @@ class Renderer {
     ctx.fillStyle = 'rgba(0, 5, 13, 0.965)';
     ctx.fillRect(0, 0, VIEW.width, VIEW.height);
     ctx.globalCompositeOperation = 'destination-out';
-    this.reveal(ctx, beacon, 108);
-    this.lightCone(ctx, beacon, game.time * 0.58, harbor.beam, 0.27, '#fff');
+    if (game.map.home) this.reveal(ctx, beacon, 108);
+    if (game.map.home) this.lightCone(ctx, beacon, game.time * 0.58, harbor.beam, 0.27, '#fff');
     this.reveal(ctx, boat, 80 * game.weather.visibility);
     if (harbor.lanternRange) this.lightCone(ctx, this.bow(boat), boat.heading, harbor.lanternRange, 0.48, '#fff');
 
@@ -352,8 +352,8 @@ class Renderer {
       const stranded = game.rescue.stranded;
       if (stranded && distance(walker, stranded) < 145) this.reveal(ctx, stranded, 21);
     }
-    for (const id of harbor.projects) this.reveal(ctx, HARBOR_HOMES[id], 31);
-    for (const building of harbor.structures) this.reveal(ctx, building, building.sprite === 'lamp' ? 48 : 37);
+    for (const id of (game.map.home ? harbor.projects : [])) this.reveal(ctx, HARBOR_HOMES[id], 31);
+    for (const building of (game.map.home ? harbor.structures : [])) this.reveal(ctx, building, building.sprite === 'lamp' ? 48 : 37);
     ctx.globalCompositeOperation = 'source-over';
     this.ctx.drawImage(this.darkness, 0, 0);
   }
@@ -708,7 +708,7 @@ class Renderer {
 
   lights(game, night, waterMask) {
     const ctx = this.ctx;
-    const { x, y } = this.world.lighthouse;
+    const { x, y } = game.map.home ? this.world.lighthouse : { x: -1000, y: -1000 };
     ctx.save();
     ctx.clip(waterMask, 'evenodd');
     this.reflect(x, y, 97, night * 0.47, game.time);
@@ -716,14 +716,14 @@ class Renderer {
     const bow = this.bow(game.boat);
     if (range) this.reflect(bow.x, bow.y, 33, 0.34, game.time);
     ctx.restore();
-    for (const id of game.harbor.projects) {
+    for (const id of (game.map.home ? game.harbor.projects : [])) {
       const { x, y } = HARBOR_HOMES[id];
       this.glow(x, y + 5, 28, 0.27 + night * 0.36);
       ctx.fillStyle = '#ffcc88';
       ctx.fillRect(x - 10, y + 2, 5, 4);
       ctx.fillRect(x + 5, y + 2, 5, 4);
     }
-    if (game.harbor.tier >= 2 || game.harbor.projects.has('smith')) {
+    if (game.map.home && (game.harbor.tier >= 2 || game.harbor.projects.has('smith'))) {
       this.glow(177, 398, 27, 0.25 + 0.13 * Math.sin(game.time * 3.3));
     }
     this.glow(x, y, 66 + night * 35, 0.29 + night * 0.46);
@@ -743,7 +743,7 @@ class Renderer {
     }
     this.disc(x, y, 5, '#fff1bc');
     if (range) this.lightCone(ctx, bow, game.boat.heading, range, 0.48, '#ffd48c64');
-    for (const building of game.harbor.built) {
+    for (const building of (game.map.home ? game.harbor.built : [])) {
       const radius = building.sprite === 'lamp' ? 53 : 32;
       this.glow(building.x, building.y, radius, 0.22 + night * 0.47);
       this.disc(building.x, building.y, 3, '#ffe9aa');
