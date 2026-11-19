@@ -106,9 +106,9 @@ class OceanSurface {
     this.canvas = canvas; this.fallback = fallback; this.renderer = renderer;
     this.mode = 'fallback'; this.reason = ''; this.depthKey = null;
     this.fallbackCtx = fallback.getContext('2d', { alpha: false });
-    this.buffer = document.createElement('canvas'); this.buffer.width = 275; this.buffer.height = 155;
+    this.buffer = document.createElement('canvas'); this.buffer.width = 550; this.buffer.height = 310;
     this.bufferCtx = this.buffer.getContext('2d', { alpha: false });
-    this.pixels = this.bufferCtx.createImageData(275, 155);
+    this.pixels = this.bufferCtx.createImageData(550, 310);
     this.noise = noiseFrom(4719); this.trails = new Float32Array(24 * 4);
     this.lastFallbackTime = -1; this.depthPixels = null;
     this.initialize();
@@ -206,14 +206,16 @@ class OceanSurface {
     // CPU FBM is evaluated in world space at 12 Hz; camera reprojection still runs every frame.
     if (Math.abs(game.time - this.lastFallbackTime) >= 1 / 12 || this.lastFallbackTime < 0 || this.fallbackDepth !== this.depthKey) {
       const data = this.pixels.data, time = game.time * 0.12, noise = this.noise;
-      const height = (x, y) => noise(x * 0.035 + time, y * 0.045 - time) * 0.56 + noise(x * 0.078 - time, y * 0.09 + time) * 0.29 + noise(x * 0.17 + time, y * 0.19) * 0.15;
+      const height = (x, y) => noise(x * 0.018 + time, y * 0.022 - time) * 0.62 + noise(x * 0.039 - time, y * 0.044 + time) * 0.26 + noise(x * 0.081 + time, y * 0.09) * 0.12;
       const light = game.map.home ? game.world.lighthouse : game.map.region.id === 'lighthouse' ? { x: 780, y: 180 } : { x: -2000, y: -2000 };
-      for (let y = 0; y < 155; y++) for (let x = 0; x < 275; x++) {
-        const wx = x * 4, wy = y * 4, i = (y * 275 + x) * 4;
+      for (let y = 0; y < 310; y++) for (let x = 0; x < 550; x++) {
+        const wx = x * 2, wy = y * 2, i = (y * 550 + x) * 4;
+        const di = (Math.floor(y / 2) * 275 + Math.floor(x / 2)) * 4;
         const h = height(wx, wy), dx = height(wx + 2, wy) - h, dy = height(wx, wy + 2) - h;
-        const distance = Math.min(this.depthPixels[i], this.depthPixels[i + (game.tide.water > 0.5 ? 2 : 1)]) / 255 * 100;
+        const distance = Math.min(this.depthPixels[di], this.depthPixels[di + (game.tide.water > 0.5 ? 2 : 1)]) / 255 * 100;
         const shallow = Math.exp(-distance / 26);
-        const spec = Math.pow(Math.max(0, 0.92 - dx * 4 - dy * 5), 22);
+        const nx = -dx * 9, ny = -dy * 9;
+        const spec = Math.pow(Math.max(0, (-0.3 * nx - 0.5 * ny + 1) / (Math.hypot(nx, ny, 1) * Math.sqrt(1.34))), 30);
         const warm = Math.exp(-Math.hypot(wx - light.x, wy - light.y) / 150) + Math.exp(-Math.hypot(wx - game.boat.x, wy - game.boat.y) / 65) * (game.harbor.lanternRange ? 1 : 0.1);
         const foam = Math.exp(-Math.pow((distance - 3 - Math.sin(time * 5 + h * 5) * 2) / 4, 2)) * h * 18;
         data[i] = 4 + h * 6 + spec * (10 + warm * 35) + foam;
